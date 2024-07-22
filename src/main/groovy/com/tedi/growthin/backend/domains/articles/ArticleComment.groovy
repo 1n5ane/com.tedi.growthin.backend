@@ -21,7 +21,7 @@ class ArticleComment implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "comments_id_seq_gen")
-    @SequenceGenerator(name = "comments_id_seq_gen", sequenceName = "public.comments_id_seq")
+    @SequenceGenerator(name = "comments_id_seq_gen", sequenceName = "public.comments_id_seq", allocationSize = 1)
     Long id
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -24,7 +24,7 @@ class Article implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "articles_id_seq_gen")
-    @SequenceGenerator(name = "articles_id_seq_gen", sequenceName = "public.articles_id_seq")
+    @SequenceGenerator(name = "articles_id_seq_gen", sequenceName = "public.articles_id_seq", allocationSize = 1)
     Long id
 
     @ManyToOne(fetch = FetchType.LAZY)

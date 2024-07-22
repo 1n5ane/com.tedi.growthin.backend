@@ -25,7 +25,7 @@ class JobAd implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "job_ads_id_seq_gen")
-    @SequenceGenerator(name = "job_ads_id_seq_gen", sequenceName = "public.job_ads_id_seq")
+    @SequenceGenerator(name = "job_ads_id_seq_gen", sequenceName = "public.job_ads_id_seq", allocationSize = 1)
     Long id
 
     @ManyToOne(fetch = FetchType.LAZY)

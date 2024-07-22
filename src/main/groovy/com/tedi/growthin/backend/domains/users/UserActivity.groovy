@@ -23,7 +23,7 @@ class UserActivity implements Serializable{
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_history_id_seq_gen")
-    @SequenceGenerator(name = "user_history_id_seq_gen", sequenceName = "public.user_history_id_seq")
+    @SequenceGenerator(name = "user_history_id_seq_gen", sequenceName = "public.user_history_id_seq", allocationSize = 1)
     Long id
 
     @ManyToOne(fetch = FetchType.LAZY)

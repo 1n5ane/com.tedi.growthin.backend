@@ -21,7 +21,7 @@ import org.hibernate.annotations.CreationTimestamp
 class ChatRoomMessage implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "chat_messages_seq_gen")
-    @SequenceGenerator(name = "chat_messages_seq_gen", sequenceName = "public.chat_messages_seq")
+    @SequenceGenerator(name = "chat_messages_seq_gen", sequenceName = "public.chat_messages_seq", allocationSize = 1)
     Long id
 
     @ManyToOne(fetch = FetchType.LAZY)

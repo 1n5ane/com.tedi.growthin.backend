@@ -20,7 +20,7 @@ import org.hibernate.annotations.CreationTimestamp
 class Media implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "media_id_seq_gen")
-    @SequenceGenerator(name = "media_id_seq_gen", sequenceName = "public.media_id_seq")
+    @SequenceGenerator(name = "media_id_seq_gen", sequenceName = "public.media_id_seq", allocationSize = 1)
     Long id
 
     @ManyToOne(fetch = FetchType.LAZY)

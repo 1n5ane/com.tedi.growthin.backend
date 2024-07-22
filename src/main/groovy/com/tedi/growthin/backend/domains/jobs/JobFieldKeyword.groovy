@@ -15,7 +15,7 @@ import jakarta.persistence.Table
 class JobFieldKeyword implements Serializable{
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "job_field_keywords_id_seq_gen")
-    @SequenceGenerator(name = "job_field_keywords_id_seq_gen", sequenceName = "public.job_field_keywords_id_seq")
+    @SequenceGenerator(name = "job_field_keywords_id_seq_gen", sequenceName = "public.job_field_keywords_id_seq", allocationSize = 1)
     Long id
 
     @Column(nullable = false, length = 255)

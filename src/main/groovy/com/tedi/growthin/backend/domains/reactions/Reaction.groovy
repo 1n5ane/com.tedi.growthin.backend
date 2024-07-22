@@ -17,7 +17,7 @@ class Reaction implements Serializable{
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "reactions_id_seq_gen")
-    @SequenceGenerator(name = "reactions_id_seq_gen", sequenceName = "public.reactions_id_seq")
+    @SequenceGenerator(name = "reactions_id_seq_gen", sequenceName = "public.reactions_id_seq", allocationSize = 1)
     Long id
 
     @Column(nullable = false)

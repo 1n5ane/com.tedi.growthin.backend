@@ -29,7 +29,7 @@ class ChatRoom implements Serializable{
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "chat_room_seq_gen")
-    @SequenceGenerator(name = "chat_room_seq_gen", sequenceName = "public.chat_room_seq")
+    @SequenceGenerator(name = "chat_room_seq_gen", sequenceName = "public.chat_room_seq", allocationSize = 1)
     Long id
 
     @ManyToOne(fetch = FetchType.LAZY)

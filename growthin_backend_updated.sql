@@ -35,6 +35,9 @@ CREATE TABLE public.users (
 	first_name varchar(255) NOT NULL,
 	last_name varchar(255) NOT NULL,
 	phone varchar(255),
+	country varchar(100),
+	area varchar(255),
+	is_admin boolean NOT NULL DEFAULT false,
 	created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone,
 	CONSTRAINT users_pk PRIMARY KEY (id),
@@ -963,6 +966,56 @@ REFERENCES public.users (id) MATCH FULL
 ON DELETE RESTRICT ON UPDATE CASCADE;
 -- ddl-end --
 
+-- object: public.admin_requests_seq | type: SEQUENCE --
+-- DROP SEQUENCE IF EXISTS public.admin_requests_seq CASCADE;
+CREATE SEQUENCE public.admin_requests_seq
+	INCREMENT BY 1
+	MINVALUE 0
+	MAXVALUE 2147483647
+	START WITH 0
+	CACHE 1
+	NO CYCLE
+	OWNED BY NONE;
+
+-- ddl-end --
+ALTER SEQUENCE public.admin_requests_seq OWNER TO postgres;
+-- ddl-end --
+
+-- object: public."AdminRequestStatus" | type: TYPE --
+-- DROP TYPE IF EXISTS public."AdminRequestStatus" CASCADE;
+CREATE TYPE public."AdminRequestStatus" AS
+ENUM ('PENDING','ACCEPTED','DECLINED');
+-- ddl-end --
+ALTER TYPE public."AdminRequestStatus" OWNER TO postgres;
+-- ddl-end --
+
+-- object: public.admin_requests | type: TABLE --
+-- DROP TABLE IF EXISTS public.admin_requests CASCADE;
+CREATE TABLE public.admin_requests (
+	id bigint NOT NULL DEFAULT nextval('public.admin_requests_seq'::regclass),
+	user_id bigint NOT NULL,
+	curated_by_user_id bigint,
+	status public."AdminRequestStatus" NOT NULL DEFAULT 'PENDING',
+	created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at timestamp with time zone,
+	CONSTRAINT admin_requests_pk PRIMARY KEY (id)
+);
+-- ddl-end --
+ALTER TABLE public.admin_requests OWNER TO postgres;
+-- ddl-end --
+
+-- object: users_fk | type: CONSTRAINT --
+-- ALTER TABLE public.admin_requests DROP CONSTRAINT IF EXISTS users_fk CASCADE;
+ALTER TABLE public.admin_requests ADD CONSTRAINT users_fk FOREIGN KEY (user_id)
+REFERENCES public.users (id) MATCH FULL
+ON DELETE RESTRICT ON UPDATE CASCADE;
+-- ddl-end --
+
+-- object: admin_requests_uq | type: CONSTRAINT --
+-- ALTER TABLE public.admin_requests DROP CONSTRAINT IF EXISTS admin_requests_uq CASCADE;
+ALTER TABLE public.admin_requests ADD CONSTRAINT admin_requests_uq UNIQUE (user_id);
+-- ddl-end --
+
 -- object: user_profile_fk | type: CONSTRAINT --
 -- ALTER TABLE public.user_profiles DROP CONSTRAINT IF EXISTS user_profile_fk CASCADE;
 ALTER TABLE public.user_profiles ADD CONSTRAINT user_profile_fk FOREIGN KEY (user_id)
@@ -1040,5 +1093,14 @@ REFERENCES public.users (id) MATCH SIMPLE
 ON DELETE RESTRICT ON UPDATE CASCADE;
 -- ddl-end --
 
-insert into users values (DEFAULT,'admin-hardcoded','admin-hardcoded@gmail.com','admin','admin','69xxxxxxxx');
+-- object: curated_by_fk | type: CONSTRAINT --
+-- ALTER TABLE public.admin_requests DROP CONSTRAINT IF EXISTS curated_by_fk CASCADE;
+ALTER TABLE public.admin_requests ADD CONSTRAINT curated_by_fk FOREIGN KEY (curated_by_user_id)
+REFERENCES public.users (id) MATCH SIMPLE
+ON DELETE RESTRICT ON UPDATE CASCADE;
+-- ddl-end --
+
+
+insert into users values (DEFAULT,'admin-hardcoded','admin-hardcoded@gmail.com','admin','admin','69xxxxxxxx',null,null,true);
 insert into user_action_types (id,type) values (0,'NEW'),(1,'UPDATE')
+

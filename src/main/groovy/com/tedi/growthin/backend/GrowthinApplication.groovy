@@ -5,8 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 
-//TODO: uncomment to autoconfigure db
-@SpringBootApplication(exclude = DataSourceAutoConfiguration.class )
+@SpringBootApplication
 @EnableConfigurationProperties
 class GrowthinApplication {
 

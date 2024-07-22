@@ -20,7 +20,7 @@ class UserConnectionRequest implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_connection_request_id_seq_gen")
-    @SequenceGenerator(name = "user_connection_request_id_seq_gen", sequenceName = "public.user_connection_request_id_seq")
+    @SequenceGenerator(name = "user_connection_request_id_seq_gen", sequenceName = "public.user_connection_request_id_seq", allocationSize = 1)
     Long id
 
     @ManyToOne(fetch = FetchType.LAZY)
