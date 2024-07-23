@@ -6,9 +6,12 @@ import com.tedi.growthin.backend.dtos.UserDto
 import com.tedi.growthin.backend.repositories.UserAdminRequestRepository
 import com.tedi.growthin.backend.repositories.UserRepository
 import com.tedi.growthin.backend.services.utils.DateTimeService
+import com.tedi.growthin.backend.utils.exception.UserValidationException
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+
+import java.time.OffsetDateTime
 
 @Service
 class UserService {
@@ -32,16 +35,16 @@ class UserService {
                 userDto.email,
                 userDto.name,
                 userDto.surname,
-                (userDto.phone && !userDto.phone.isEmpty())?userDto.phone:null,
-                (userDto.area && !userDto.area.isEmpty())?userDto.area:null,
-                (userDto.country && !userDto.country.isEmpty())?userDto.country:null
+                (userDto.phone && !userDto.phone.isEmpty()) ? userDto.phone : null,
+                (userDto.area && !userDto.area.isEmpty()) ? userDto.area : null,
+                (userDto.country && !userDto.country.isEmpty()) ? userDto.country : null
         )
 
         //create user to resource server
         def registeredUser = userRepository.save(user)
 
         //if createAdminRequest -> Insert new AdminRequest (In case of exception everything will be rolled back)
-        if(createAdminRequest){
+        if (createAdminRequest) {
             UserAdminRequest userAdminRequest = new UserAdminRequest(registeredUser)
             adminRequestRepository.save(userAdminRequest)
         }
@@ -49,8 +52,10 @@ class UserService {
         //if successfull -> then create user to auth server
         //in case auth server fails -> resource server creation will be rolled back
         //and error will be returned
-        userAuthServerService.registerUser(userDto)
-
+        def authServerResponse = userAuthServerService.registerUser(userDto)
+        if(!authServerResponse["success"]){
+            throw new UserValidationException("${authServerResponse["error"]}")
+        }
         //return resource server registered user entity
         return registeredUser
     }
@@ -80,22 +85,70 @@ class UserService {
         return authServerUserExists
     }
 
-    def getUser(UserDto userDto) {
+    def getUserById(Long userId) {
         // user must be authenticated and authorized (also get password from auth server)
-        // check if id or username provided and get accordingly
+        Optional<User> optionalUser = userRepository.findById(userId)
+        UserDto userDto = null
+        if (optionalUser.isPresent())
+            userDto = userDtoFromUser(optionalUser.get())
+        return userDto
+    }
+
+    def getUserByUsername(String username) {
+        User user = userRepository.findByUsername(username)
+        UserDto userDto = null
+        if (user)
+            userDto = userDtoFromUser(user)
+        return userDto
+    }
+
+    private def static userDtoFromUser(User user) {
+        new UserDto(
+                user.id,
+                user.username,
+                user.firstName,
+                user.lastName,
+                user.email,
+                user.isAdmin ? ['ROLE_USER', 'ROLE_ADMIN'] : ['ROLE_USER'],
+                user.phone,
+                user.country,
+                user.area,
+                user.createdAt,
+                user.updatedAt
+        )
     }
 
     def listAllUsers() {
         //list all app users (not auth server users)
     }
 
-    @Transactional
-    def updateUser(UserDto userDto) {
+    // a jwt token is provided because auth server is updated too!
+    @Transactional(rollbackFor = Exception.class)
+    def updateUser(UserDto userDto, String jwtToken) {
+        User user = new User(
+                userDto.id as Long,
+                userDto.username,
+                userDto.email,
+                userDto.name,
+                userDto.surname,
+                (userDto.phone && !userDto.phone.isEmpty()) ? userDto.phone : null,
+                (userDto.area && !userDto.area.isEmpty()) ? userDto.area : null,
+                (userDto.country && !userDto.country.isEmpty()) ? userDto.country : null,
+                userDto.authorities.contains("ROLE_ADMIN"),
+                null,
+                OffsetDateTime.now()
+        )
         //first update user to resource server
+        user = userRepository.save(user)
 
         //if successfull -> then update user to auth server
         //in case auth server fails -> resource server update will be rolled back
         //and error will be returned
+        def authServerResponse = userAuthServerService.updateUser(userDto, jwtToken)
+        if(!authServerResponse["success"]){
+            throw new UserValidationException("${authServerResponse["error"]}")
+        }
+        return userDtoFromUser(user)
     }
 
 }

@@ -32,7 +32,6 @@ class UserValidationService implements ValidationService {
         if (checkContainsInvalidChars(request.username, invalidChars))
             throw new UserValidationException("Username contains invalid characters")
 
-
 //       Email check
         if (checkIsEmpty(request.email))
             throw new UserValidationException("Email cannot be empty")
@@ -42,13 +41,6 @@ class UserValidationService implements ValidationService {
 
         if (!(request.email).contains("@"))
             throw new UserValidationException("Email is invalid")
-
-//      Password Check
-        if (checkIsEmpty(request.password))
-            throw new UserValidationException("Password cannot be empty")
-
-        if (checkNotIsRange(request.password, 8, 255))
-            throw new UserValidationException("Password must be between 8 and 255 characters")
 
 //      first name check
         if (checkIsEmpty(request.name))

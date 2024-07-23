@@ -3,7 +3,13 @@ package com.tedi.growthin.backend.services.users
 import com.tedi.growthin.backend.configuration.EndpointsConfiguration
 import com.tedi.growthin.backend.dtos.UserDto
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
+import org.springframework.util.MultiValueMap
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.util.UriComponentsBuilder
 
@@ -16,9 +22,27 @@ class UserAuthServerService {
     @Autowired
     EndpointsConfiguration endpointsConfiguration
 
-    def registerUser(UserDto userDto)throws Exception {
+    def registerUser(UserDto userDto) throws Exception {
         def userUrl = endpointsConfiguration.getAuthServerBaseUserEndpoint()
-        def res = restTemplate.postForEntity(userUrl,userDto,HashMap.class)
+        def res = restTemplate.postForEntity(userUrl, userDto, HashMap.class)
+        return res.getBody()
+    }
+
+    def updateUser(UserDto userDto, String jwtToken) throws Exception {
+        def userUrl = endpointsConfiguration.getAuthServerBaseUserEndpoint()
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + jwtToken);
+        headers.setContentType(MediaType.APPLICATION_JSON); // Ensure Content-Type is set correctly
+
+        HttpEntity httpEntity = new HttpEntity(userDto, headers)
+        ResponseEntity<HashMap> response = restTemplate.exchange(
+                userUrl,
+                HttpMethod.PUT,
+                httpEntity,
+                HashMap.class
+        )
+        return response.getBody()
     }
 
     def checkUserExistsByUsername(String username) throws Exception {

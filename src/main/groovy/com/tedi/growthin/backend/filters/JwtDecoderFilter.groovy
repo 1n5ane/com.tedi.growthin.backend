@@ -2,6 +2,7 @@ package com.tedi.growthin.backend.filters
 
 import com.tedi.growthin.backend.configuration.JwtUriConfiguration
 import com.tedi.growthin.backend.services.jwt.PublicKeyService
+import com.tedi.growthin.backend.services.users.UserService
 import groovy.util.logging.Slf4j
 import io.jsonwebtoken.Claims
 import io.jsonwebtoken.ExpiredJwtException
@@ -14,6 +15,8 @@ import jakarta.servlet.ServletException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.http.HttpMethod
 import org.springframework.lang.NonNull
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.authority.SimpleGrantedAuthority
@@ -34,14 +37,37 @@ class JwtDecoderFilter extends OncePerRequestFilter {
     @Autowired
     PublicKeyService publicKeyService
 
+    @Autowired
+    UserService userService
+
+    @Autowired
+    @Qualifier(value = "PUBLIC_URIS")
+    final def PUBLIC_URIS
+
+    private checkUriIsPublic(String URI, String method){
+        def res = PUBLIC_URIS.find(x -> x["path"] == URI)
+        if(!res)
+            return false
+        return (res["methods"] as List).contains(method)
+    }
+
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
+
+        //SKIP URLS THAT DON'T REQUIRE AUTHENTICATION (PUBLICLY ACCESSIBLE)
+        if(checkUriIsPublic(request.requestURI.toString(), request.method)){
+            filterChain.doFilter(request, response)
+            return
+        }
+
+//      THIS CODE WILL RUN IF ENDPOINT REQUIRES AUTHENTICATION
+//      IF TOKEN IS MISSING OR INVALID -> RETURN UNAUTHORIZED
         String authHeader = request.getHeader("Authorization")
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response)
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED)
             return
         }
 
@@ -55,6 +81,7 @@ class JwtDecoderFilter extends OncePerRequestFilter {
                     !(jwtUriConfiguration.issuerUri).contains(claimsMap["iss"] as String)) {
                 throw new Exception("Issuer don't match with issuer's uri in config")
             }
+            claimsMap["appUserId"] = userService.getUserByUsername(claimsMap['sub'] as String).id
             Jwt oauth2Jwt = new Jwt(
                     jwt,
                     new Date(claimsMap['iat'] as Long).toInstant(),
@@ -71,12 +98,20 @@ class JwtDecoderFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(authentication)
         } catch (ExpiredJwtException expiredJwtException) {
             log.trace("Token has expired: ${expiredJwtException.getMessage()}")
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED)
+            return
         } catch (MalformedJwtException malformedJwtException) {
             log.trace("Token is malformed: ${malformedJwtException.getMessage()}")
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED)
+            return
         } catch (SignatureException signatureException) {
             log.trace("Jwt signature couldn't be verified: ${signatureException.getMessage()}")
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED)
+            return
         } catch (Exception e) {
             log.trace(e.getMessage())
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED)
+            return
         }
 
         filterChain.doFilter(request, response)

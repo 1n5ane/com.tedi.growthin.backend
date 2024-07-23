@@ -2,6 +2,7 @@ package com.tedi.growthin.backend.controllers
 
 import com.tedi.growthin.backend.dtos.UserDto
 import com.tedi.growthin.backend.services.users.UserIntegrationService
+import com.tedi.growthin.backend.utils.exception.ForbiddenException
 import com.tedi.growthin.backend.utils.exception.UserEmailExistsException
 import com.tedi.growthin.backend.utils.exception.UserUsernameExistsException
 import com.tedi.growthin.backend.utils.exception.UserValidationException
@@ -48,10 +49,40 @@ class UserController {
     @PutMapping(value = ["/{id}"], produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @ResponseBody
-    def updateUser(@PathVariable("id") String id, Authentication authentication){
-//  TODO: make a service that extracts claims from jwt token
-//      Users with role user can only update his own info (admin can do whatever he likes)
+    def updateUser(@PathVariable("id") String id, @RequestBody UserDto user, Authentication authentication) {
+        Long userId
+        def response = [
+                "success": true,
+                "user"   : null,
+                "error"  : ""
+        ]
+        try {
+            userId = id.toLong()
+        } catch (NumberFormatException ignored) {
+            response["success"] = false
+            response["error"] = "Invalid User Id"
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+        user.id = userId
+        try {
+            def updatedUser = userIntegrationService.updateUser(user, authentication)
+            response["user"] = updatedUser
+        } catch (ForbiddenException forbiddenException) {
+            response["success"] = false
+            response["error"] = forbiddenException.getMessage()
+            log.error("Failed to update user '${id}': ${forbiddenException.getMessage()}")
+            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN)
+        } catch (ValidationException validationException) {
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+            log.error("Failed to update user '${id}': ${validationException.getMessage()}")
+        } catch (Exception exception){
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+            log.error("Failed to update user '${id}': ${exception.getMessage()}")
+        }
 
+        return new ResponseEntity<>(response, HttpStatus.OK)
     }
 
     @PostMapping(value = ["/", ""], produces = "application/json;charset=UTF-8")
@@ -65,18 +96,14 @@ class UserController {
         try {
             UserDto registeredUser = userIntegrationService.registerUser(userDto)
             response["user"] = registeredUser
-        }catch(UserUsernameExistsException usernameExistsException){
-            error = usernameExistsException.getMessage()
-        }catch(UserEmailExistsException emailExistsException){
-            error = emailExistsException.getMessage()
-        }catch(ValidationException validationException){
+        } catch (ValidationException validationException) {
             error = validationException.getMessage()
-        }catch(Exception exception){
+        } catch (Exception exception) {
             error = "An error occured! Please try again later"
             log.error(exception.getMessage())
         }
 
-        if(!error.isEmpty()){
+        if (!error.isEmpty()) {
             response["success"] = false
             response["error"] = error
         }

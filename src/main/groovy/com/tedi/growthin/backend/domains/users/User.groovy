@@ -48,7 +48,7 @@ class User implements Serializable {
     @Column(length = 100)
     String country
 
-    @Column
+    @Column(updatable = false)
     @CreationTimestamp
     @Temporal(value = TemporalType.TIMESTAMP)
     OffsetDateTime createdAt
