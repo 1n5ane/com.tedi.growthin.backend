@@ -331,20 +331,12 @@ CREATE SEQUENCE public.user_connection_request_id_seq
 ALTER SEQUENCE public.user_connection_request_id_seq OWNER TO postgres;
 -- ddl-end --
 
--- object: public.user_connection_requests | type: TABLE --
--- DROP TABLE IF EXISTS public.user_connection_requests CASCADE;
-CREATE TABLE public.user_connection_requests (
-	id bigint NOT NULL DEFAULT nextval('public.user_connection_request_id_seq'::regclass),
-	user_id bigint NOT NULL,
-	connected_user_id bigint NOT NULL,
-	status smallint NOT NULL DEFAULT 0,
-	created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	CONSTRAINT user_connection_requests_pk PRIMARY KEY (id)
-);
+-- object: public."UserConnectionRequestStatus" | type: TYPE --
+-- DROP TYPE IF EXISTS public."UserConnectionRequestStatus" CASCADE;
+CREATE TYPE public."UserConnectionRequestStatus" AS
+ENUM ('PENDING','ACCEPTED','DECLINED');
 -- ddl-end --
-COMMENT ON COLUMN public.user_connection_requests.status IS E'0 is for pending, 1 accepted, 2 rejected';
--- ddl-end --
-ALTER TABLE public.user_connection_requests OWNER TO postgres;
+ALTER TYPE public."UserConnectionRequestStatus" OWNER TO postgres;
 -- ddl-end --
 
 -- object: public.user_job_field_keywords | type: TABLE --
@@ -435,7 +427,8 @@ CREATE TABLE public.user_history (
 	id_user_comments_reactions bigint,
 	is_article_reaction boolean NOT NULL DEFAULT false,
 	id_user_articles_reactions bigint,
-	created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone,
 	CONSTRAINT user_history_pk PRIMARY KEY (id)
 );
 -- ddl-end --
@@ -690,11 +683,18 @@ REFERENCES public.users (id) MATCH FULL
 ON DELETE RESTRICT ON UPDATE CASCADE;
 -- ddl-end --
 
--- object: users_fk | type: CONSTRAINT --
--- ALTER TABLE public.user_connection_requests DROP CONSTRAINT IF EXISTS users_fk CASCADE;
-ALTER TABLE public.user_connection_requests ADD CONSTRAINT users_fk FOREIGN KEY (user_id)
-REFERENCES public.users (id) MATCH FULL
-ON DELETE RESTRICT ON UPDATE CASCADE;
+-- object: public.user_connection_requests | type: TABLE --
+-- DROP TABLE IF EXISTS public.user_connection_requests CASCADE;
+CREATE TABLE public.user_connection_requests (
+	id bigint NOT NULL DEFAULT nextval('public.user_connection_request_id_seq'::regclass),
+	user_id bigint NOT NULL,
+	connected_user_id bigint NOT NULL,
+	status public."UserConnectionRequestStatus" NOT NULL DEFAULT 'PENDING',
+	created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT user_connection_requests_pk PRIMARY KEY (id)
+);
+-- ddl-end --
+ALTER TABLE public.user_connection_requests OWNER TO postgres;
 -- ddl-end --
 
 -- object: articles_fk | type: CONSTRAINT --
@@ -1016,6 +1016,13 @@ ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE public.admin_requests ADD CONSTRAINT admin_requests_uq UNIQUE (user_id);
 -- ddl-end --
 
+-- object: users_fk | type: CONSTRAINT --
+-- ALTER TABLE public.user_connection_requests DROP CONSTRAINT IF EXISTS users_fk CASCADE;
+ALTER TABLE public.user_connection_requests ADD CONSTRAINT users_fk FOREIGN KEY (user_id)
+REFERENCES public.users (id) MATCH FULL
+ON DELETE RESTRICT ON UPDATE CASCADE;
+-- ddl-end --
+
 -- object: user_profile_fk | type: CONSTRAINT --
 -- ALTER TABLE public.user_profiles DROP CONSTRAINT IF EXISTS user_profile_fk CASCADE;
 ALTER TABLE public.user_profiles ADD CONSTRAINT user_profile_fk FOREIGN KEY (user_id)
@@ -1100,7 +1107,6 @@ REFERENCES public.users (id) MATCH SIMPLE
 ON DELETE RESTRICT ON UPDATE CASCADE;
 -- ddl-end --
 
-
-insert into users values (DEFAULT,'admin-hardcoded','admin-hardcoded@gmail.com','admin','admin','69xxxxxxxx',null,null,true);
-insert into user_action_types (id,type) values (0,'NEW'),(1,'UPDATE')
-
+insert into users values (DEFAULT,'admin-hardcoded','admin-hardcoded@gmail.com','admin','admin','69xxxxxxxx');
+insert into user_action_types (id,type) values (0,'NEW'),(1,'UPDATE');
+CREATE CAST (varchar AS public."UserConnectionRequestStatus") WITH INOUT AS IMPLICIT;

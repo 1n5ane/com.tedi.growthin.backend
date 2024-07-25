@@ -1,7 +1,7 @@
 package com.tedi.growthin.backend.services.validation
 
-import com.tedi.growthin.backend.dtos.UserDto
-import com.tedi.growthin.backend.utils.exception.UserValidationException
+import com.tedi.growthin.backend.dtos.users.UserDto
+import com.tedi.growthin.backend.utils.exception.validation.users.UserValidationException
 import groovy.util.logging.Slf4j
 import org.springframework.stereotype.Service
 

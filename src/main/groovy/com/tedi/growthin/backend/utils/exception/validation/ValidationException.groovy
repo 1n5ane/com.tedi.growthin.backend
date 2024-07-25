@@ -1,4 +1,4 @@
-package com.tedi.growthin.backend.utils.exception
+package com.tedi.growthin.backend.utils.exception.validation
 
 import org.springframework.stereotype.Component
 

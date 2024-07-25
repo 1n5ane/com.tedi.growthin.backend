@@ -7,4 +7,6 @@ enum AdminRequestStatus {
     PENDING,
     ACCEPTED,
     DECLINED
+
+    AdminRequestStatus() {}
 }

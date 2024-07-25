@@ -1,17 +1,21 @@
-package com.tedi.growthin.backend.services.users
+package com.tedi.growthin.backend.services
 
+import com.tedi.growthin.backend.domains.enums.UserConnectionRequestStatus
 import com.tedi.growthin.backend.domains.users.User
-import com.tedi.growthin.backend.dtos.UserDto
+import com.tedi.growthin.backend.domains.users.UserConnectionRequest
+import com.tedi.growthin.backend.dtos.users.UserConnectionRequestDto
+import com.tedi.growthin.backend.dtos.users.UserDto
 import com.tedi.growthin.backend.services.jwt.JwtService
+import com.tedi.growthin.backend.services.users.UserConnectionService
+import com.tedi.growthin.backend.services.users.UserService
 import com.tedi.growthin.backend.services.validation.UserValidationService
 import com.tedi.growthin.backend.services.validation.ValidationService
 import com.tedi.growthin.backend.utils.exception.ForbiddenException
-import com.tedi.growthin.backend.utils.exception.UserEmailExistsException
-import com.tedi.growthin.backend.utils.exception.UserUsernameExistsException
-import com.tedi.growthin.backend.utils.exception.UserValidationException
+import com.tedi.growthin.backend.utils.exception.validation.users.UserEmailExistsException
+import com.tedi.growthin.backend.utils.exception.validation.users.UserUsernameExistsException
+import com.tedi.growthin.backend.utils.exception.validation.users.UserValidationException
 import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.http.HttpStatus
 import org.springframework.security.core.Authentication
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
@@ -29,9 +33,12 @@ class UserIntegrationService {
     @Autowired
     UserService userService
 
+    @Autowired
+    UserConnectionService userConnectionService
+
 //   TODO: add admin_request table for admin requests on user register
 
-    def registerUser(UserDto userDto) throws Exception {
+    UserDto registerUser(UserDto userDto) throws Exception {
         validationServiceMap['userValidationService'].validate(userDto)
 
         //All users initially registered with ROLE_USER
@@ -72,7 +79,7 @@ class UserIntegrationService {
 
     }
 
-    def updateUser(UserDto user, Authentication authentication) throws Exception {
+    UserDto updateUser(UserDto user, Authentication authentication) throws Exception {
         def userJwtToken = (Jwt) authentication.getCredentials()
 
         //get user from username contained in token
@@ -117,7 +124,7 @@ class UserIntegrationService {
         return updatedUser
     }
 
-    def checkUserExistsByEmail(String email) throws Exception {
+    Boolean checkUserExistsByEmail(String email) throws Exception {
         //check if user exists in both auth server and resource one
         def isValid = UserValidationService.emailIsValid(email)
         if (!isValid)
@@ -127,7 +134,7 @@ class UserIntegrationService {
 
     }
 
-    def checkUserExistsByUsername(String username) throws Exception {
+    Boolean checkUserExistsByUsername(String username) throws Exception {
         //check if user exists in both auth server and resource one
         def isValid = UserValidationService.usernameIsValid(username)
         if (!isValid)
@@ -135,14 +142,33 @@ class UserIntegrationService {
 
         return userService.checkUserExistsByUsername(username)
     }
-//
-//    def checkUserExistsById(String username) throws Exception {
-//        //check if user exists in both auth server and resource one
-//        def isValid = UserValidationService.usernameIsValid(username)
-//        if (!isValid)
-//            throw new UserValidationException("Username is invalid")
-//
-//        return userService.checkUserExistsByUsername(username)
-//    }
+
+    UserConnectionRequestDto createConnectionRequest(UserConnectionRequestDto connectionRequestDto, Authentication authentication) {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+
+        //get user from username contained in token
+        //users and admins can only update their own details
+        //admins can only ban users not alter their details
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        connectionRequestDto.userId = currentLoggedInUserId
+
+        //remove id if provided in request
+        connectionRequestDto.id = null
+
+        validationServiceMap['userConnectionRequestValidationService'].validate(connectionRequestDto)
+
+        UserConnectionRequest userConnectionRequest = userConnectionService.createUserConnectionRequest(connectionRequestDto)
+
+        log.info("User '${userConnectionRequest.user.id}' " +
+                "succesfully made a connection request with user '${userConnectionRequest.connectedUser.id}'")
+
+        return new UserConnectionRequestDto(
+                userConnectionRequest.id,
+                connectionRequestDto.userId,
+                connectionRequestDto.connectedUserId,
+                UserConnectionRequestStatus.PENDING
+        )
+    }
 
 }

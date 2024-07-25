@@ -38,7 +38,7 @@ class Article implements Serializable {
     String body
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "public_status")
+    @Column(nullable = false)
     PublicStatus publicStatus = PublicStatus.PUBLIC
 
     @Column(nullable = false)

@@ -1,12 +1,11 @@
-package com.tedi.growthin.backend.controllers
+package com.tedi.growthin.backend.controllers.users
 
-import com.tedi.growthin.backend.dtos.UserDto
-import com.tedi.growthin.backend.services.users.UserIntegrationService
+import com.tedi.growthin.backend.dtos.users.UserConnectionRequestDto
+import com.tedi.growthin.backend.dtos.users.UserDto
+import com.tedi.growthin.backend.services.UserIntegrationService
 import com.tedi.growthin.backend.utils.exception.ForbiddenException
-import com.tedi.growthin.backend.utils.exception.UserEmailExistsException
-import com.tedi.growthin.backend.utils.exception.UserUsernameExistsException
-import com.tedi.growthin.backend.utils.exception.UserValidationException
-import com.tedi.growthin.backend.utils.exception.ValidationException
+import com.tedi.growthin.backend.utils.exception.validation.users.UserValidationException
+import com.tedi.growthin.backend.utils.exception.validation.ValidationException
 import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
@@ -36,7 +35,10 @@ class UserController {
     UserIntegrationService userIntegrationService
 
 
-//    @GetMapping(value = "/user/{id}", produces = "application/json;charset=UTF-8")
+//    TODO: check if 2 users are connected -> if connected return everything -> if not return everything except (phone and email)
+//          if user is admin he will view all the details from admin controller and not from here
+//          (he is also a user -> he will view everything as a user up until he goes to the admin section)
+//    @GetMapping(value = "/{id}", produces = "application/json;charset=UTF-8")
 //    @PreAuthorize("hasRole('ADMIN')")
 //    @ResponseBody
 //    def getUser(@PathVariable("id") String id, Authentication authentication) {
@@ -45,6 +47,45 @@ class UserController {
 //                        "error"  : ""]
 //        return new ResponseEntity<>(response, HttpStatus.OK)
 //    }
+
+    @PostMapping(value = ['/{connectedUserId}/connect'], produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def createUserConnectionRequest(@PathVariable("connectedUserId") String connectedUserId,
+                                    Authentication authentication){
+        def response = [
+                "success": true,
+                "userConnectionRequest":null,
+                "error"  : ""
+        ]
+
+        try{
+            connectedUserId.toLong()
+        }catch(NumberFormatException ignored){
+            response["success"] = false
+            response["error"] = "Invalid connection userId"
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        UserConnectionRequestDto userConnectionRequestDto = new UserConnectionRequestDto()
+        userConnectionRequestDto.connectedUserId = connectedUserId.toLong()
+
+        try{
+            def createdUserConnectionRequestDto = userIntegrationService.createConnectionRequest(userConnectionRequestDto, authentication)
+            response["userConnectionRequest"] = createdUserConnectionRequestDto
+        }catch (ValidationException validationException){
+            log.trace(validationException.getMessage())
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        }catch (Exception exception){
+            log.error("failed to create user connection request ${userConnectionRequestDto} : ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+
+    }
 
     @PutMapping(value = ["/{id}"], produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
@@ -145,7 +186,7 @@ class UserController {
             return new ResponseEntity<>(response, HttpStatus.OK)
         }
 
-        def emailExists = null
+        def emailExists
         if (!usernameExists && email && !email.isEmpty()) {
             try {
                 emailExists = userIntegrationService.checkUserExistsByEmail(email)

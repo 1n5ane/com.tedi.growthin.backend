@@ -7,4 +7,6 @@ enum PublicStatus {
     PUBLIC,
     CONNECTED_NETWORK,
     HIDDEN
+
+    PublicStatus() {}
 }
