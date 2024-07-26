@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.Authentication
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -48,45 +49,6 @@ class UserController {
 //        return new ResponseEntity<>(response, HttpStatus.OK)
 //    }
 
-    @PostMapping(value = ['/{connectedUserId}/connect'], produces = "application/json;charset=UTF-8")
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
-    @ResponseBody
-    def createUserConnectionRequest(@PathVariable("connectedUserId") String connectedUserId,
-                                    Authentication authentication){
-        def response = [
-                "success": true,
-                "userConnectionRequest":null,
-                "error"  : ""
-        ]
-
-        try{
-            connectedUserId.toLong()
-        }catch(NumberFormatException ignored){
-            response["success"] = false
-            response["error"] = "Invalid connection userId"
-            return new ResponseEntity<>(response, HttpStatus.OK)
-        }
-
-        UserConnectionRequestDto userConnectionRequestDto = new UserConnectionRequestDto()
-        userConnectionRequestDto.connectedUserId = connectedUserId.toLong()
-
-        try{
-            def createdUserConnectionRequestDto = userIntegrationService.createConnectionRequest(userConnectionRequestDto, authentication)
-            response["userConnectionRequest"] = createdUserConnectionRequestDto
-        }catch (ValidationException validationException){
-            log.trace(validationException.getMessage())
-            response["success"] = false
-            response["error"] = validationException.getMessage()
-        }catch (Exception exception){
-            log.error("failed to create user connection request ${userConnectionRequestDto} : ${exception.getMessage()}")
-            response["success"] = false
-            response["error"] = "An error occured! Please try again later"
-        }
-
-        return new ResponseEntity<>(response, HttpStatus.OK)
-
-    }
-
     @PutMapping(value = ["/{id}"], produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @ResponseBody
@@ -117,7 +79,7 @@ class UserController {
             response["success"] = false
             response["error"] = validationException.getMessage()
             log.error("Failed to update user '${id}': ${validationException.getMessage()}")
-        } catch (Exception exception){
+        } catch (Exception exception) {
             response["success"] = false
             response["error"] = "An error occured! Please try again later"
             log.error("Failed to update user '${id}': ${exception.getMessage()}")

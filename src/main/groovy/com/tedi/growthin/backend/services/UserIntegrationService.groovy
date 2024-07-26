@@ -1,12 +1,9 @@
 package com.tedi.growthin.backend.services
 
-import com.tedi.growthin.backend.domains.enums.UserConnectionRequestStatus
+
 import com.tedi.growthin.backend.domains.users.User
-import com.tedi.growthin.backend.domains.users.UserConnectionRequest
-import com.tedi.growthin.backend.dtos.users.UserConnectionRequestDto
 import com.tedi.growthin.backend.dtos.users.UserDto
 import com.tedi.growthin.backend.services.jwt.JwtService
-import com.tedi.growthin.backend.services.users.UserConnectionService
 import com.tedi.growthin.backend.services.users.UserService
 import com.tedi.growthin.backend.services.validation.UserValidationService
 import com.tedi.growthin.backend.services.validation.ValidationService
@@ -32,9 +29,6 @@ class UserIntegrationService {
 
     @Autowired
     UserService userService
-
-    @Autowired
-    UserConnectionService userConnectionService
 
 //   TODO: add admin_request table for admin requests on user register
 
@@ -141,34 +135,6 @@ class UserIntegrationService {
             throw new UserValidationException("Username is invalid")
 
         return userService.checkUserExistsByUsername(username)
-    }
-
-    UserConnectionRequestDto createConnectionRequest(UserConnectionRequestDto connectionRequestDto, Authentication authentication) {
-        def userJwtToken = (Jwt) authentication.getCredentials()
-
-        //get user from username contained in token
-        //users and admins can only update their own details
-        //admins can only ban users not alter their details
-        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
-
-        connectionRequestDto.userId = currentLoggedInUserId
-
-        //remove id if provided in request
-        connectionRequestDto.id = null
-
-        validationServiceMap['userConnectionRequestValidationService'].validate(connectionRequestDto)
-
-        UserConnectionRequest userConnectionRequest = userConnectionService.createUserConnectionRequest(connectionRequestDto)
-
-        log.info("User '${userConnectionRequest.user.id}' " +
-                "succesfully made a connection request with user '${userConnectionRequest.connectedUser.id}'")
-
-        return new UserConnectionRequestDto(
-                userConnectionRequest.id,
-                connectionRequestDto.userId,
-                connectionRequestDto.connectedUserId,
-                UserConnectionRequestStatus.PENDING
-        )
     }
 
 }

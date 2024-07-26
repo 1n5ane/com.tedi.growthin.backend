@@ -3,8 +3,8 @@ package com.tedi.growthin.backend.services.users
 import com.tedi.growthin.backend.domains.users.User
 import com.tedi.growthin.backend.domains.users.UserAdminRequest
 import com.tedi.growthin.backend.dtos.users.UserDto
-import com.tedi.growthin.backend.repositories.UserAdminRequestRepository
-import com.tedi.growthin.backend.repositories.UserRepository
+import com.tedi.growthin.backend.repositories.users.UserAdminRequestRepository
+import com.tedi.growthin.backend.repositories.users.UserRepository
 import com.tedi.growthin.backend.services.utils.DateTimeService
 import com.tedi.growthin.backend.utils.exception.validation.users.UserValidationException
 import org.springframework.beans.factory.annotation.Autowired

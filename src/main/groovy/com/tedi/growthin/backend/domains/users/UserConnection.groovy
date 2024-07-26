@@ -15,6 +15,8 @@ import jakarta.persistence.Temporal
 import jakarta.persistence.TemporalType
 import org.hibernate.annotations.CreationTimestamp
 
+import java.time.OffsetDateTime
+
 @Entity
 @Table(name = "user_connections")
 class UserConnection implements Serializable {
@@ -32,10 +34,19 @@ class UserConnection implements Serializable {
     @JoinColumn(name = "connected_user_id")
     User connectedUser
 
-    @Column
+    @Column(updatable = false)
     @CreationTimestamp
     @Temporal(value = TemporalType.TIMESTAMP)
-    Date createdAt
+    OffsetDateTime createdAt
+
+    UserConnection() {}
+
+    UserConnection(Long id, User user, User connectedUser, OffsetDateTime createdAt = null) {
+        this.id = id
+        this.user = user
+        this.connectedUser = connectedUser
+        this.createdAt = createdAt
+    }
 
     boolean equals(o) {
         if (this.is(o)) return true

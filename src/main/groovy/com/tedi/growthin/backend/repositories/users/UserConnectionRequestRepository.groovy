@@ -1,4 +1,4 @@
-package com.tedi.growthin.backend.repositories
+package com.tedi.growthin.backend.repositories.users
 
 import com.tedi.growthin.backend.domains.users.UserConnectionRequest
 import org.springframework.data.domain.Page
@@ -14,7 +14,10 @@ interface UserConnectionRequestRepository extends PagingAndSortingRepository<Use
 
     Page<UserConnectionRequest> findAll(Pageable pageable)
 
-    @Query("SELECT ucr from UserConnectionRequest ucr where ucr.user.id = :userId and ucr.connectedUser.id = :connectedUserId")
+    @Query("select ucr from UserConnectionRequest ucr where ucr.user.id = :userId and ucr.connectedUser.id = :connectedUserId")
     UserConnectionRequest findByUserIdAndConnectedUserId(@Param("userId") Long userId, @Param("connectedUserId") Long connectedUserId)
 
+    //it doesn't matter who made the request
+    @Query("select ucr from UserConnectionRequest ucr where (ucr.user.id = :userId1 and ucr.connectedUser.id = :userId2) or (ucr.user.id = :userId2 and ucr.connectedUser.id = :userId1) ")
+    Optional<UserConnectionRequest> findByUserIds(@Param("userId1") Long userId1, @Param("userId2") Long userId2)
 }

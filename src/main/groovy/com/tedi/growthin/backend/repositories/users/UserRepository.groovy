@@ -1,4 +1,4 @@
-package com.tedi.growthin.backend.repositories
+package com.tedi.growthin.backend.repositories.users
 
 import com.tedi.growthin.backend.domains.users.User
 import org.springframework.data.domain.Page
