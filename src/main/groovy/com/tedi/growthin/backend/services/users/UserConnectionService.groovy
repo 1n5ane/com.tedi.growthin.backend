@@ -189,7 +189,7 @@ class UserConnectionService {
         )
 
         if (optionalUserConnection.isEmpty()){
-            throw new UserConnectionException("Users are not connected")
+            throw new UserConnectionException("Users are not connected [userId1 = '${userConnectionDto.userId}', 'userId2 = ${userConnectionDto.connectedUserId}']")
         }
 
         def userConnection = optionalUserConnection.get()

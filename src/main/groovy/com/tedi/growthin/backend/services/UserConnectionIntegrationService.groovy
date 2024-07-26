@@ -70,12 +70,12 @@ class UserConnectionIntegrationService {
             //if either udpate or user connection creation fails -> rollback
             def userConnection = userConnectionService.updateUserConnectionRequestAndCreateUserConnection(connectionRequestDto)
             log.info("User with id '${userConnection.connectedUser.id}' " +
-                    "accepted connection request by user with id '${userConnection.user.id}'" +
+                    "accepted connection request by user with id '${userConnection.user.id}' " +
                     "and a new connection was created with id '${userConnection.id}'")
             userIdMadeTheRequest = userConnection.user.id
         } else if (connectionRequestDto.status == UserConnectionRequestStatus.DECLINED) {
             def userConnectionRequest = userConnectionService.updateUserConnectionRequest(connectionRequestDto)
-            log.info("User with id '${userConnectionRequest.connectedUser.id}' successfuly declined" +
+            log.info("User with id '${userConnectionRequest.connectedUser.id}' successfuly declined " +
                     "connection request with id '${userConnectionRequest.id}' " +
                     "made by user with id '${userConnectionRequest.user.id}'")
             userIdMadeTheRequest = userConnectionRequest.user.id
@@ -104,6 +104,8 @@ class UserConnectionIntegrationService {
         userConnectionDto.userId = currentLoggedInUserId
 
         userConnectionService.removeUserConnection(userConnectionDto)
+
+        //TODO: ADD LOGGING INDICATING SUCCESS
 
         return true
 

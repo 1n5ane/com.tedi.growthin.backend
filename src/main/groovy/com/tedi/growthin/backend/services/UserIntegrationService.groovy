@@ -25,9 +25,6 @@ class UserIntegrationService {
     Map<String, ValidationService> validationServiceMap
 
     @Autowired
-    JwtService jwtService
-
-    @Autowired
     UserService userService
 
 //   TODO: add admin_request table for admin requests on user register

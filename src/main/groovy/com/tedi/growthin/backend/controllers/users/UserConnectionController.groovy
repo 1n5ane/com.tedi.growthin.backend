@@ -1,6 +1,5 @@
 package com.tedi.growthin.backend.controllers.users
 
-import com.tedi.growthin.backend.domains.users.UserConnection
 import com.tedi.growthin.backend.dtos.users.UserConnectionDto
 import com.tedi.growthin.backend.dtos.users.UserConnectionRequestDto
 import com.tedi.growthin.backend.services.UserConnectionIntegrationService
@@ -13,6 +12,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.Authentication
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -56,6 +56,9 @@ class UserConnectionController {
 
         userConnectionRequestDto.id = connectionRequestId.toLong()
 
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
         try {
             def userConnectionRequest = userConnectionIntegrationService.updateConnectionRequest(userConnectionRequestDto, authentication)
             userConnectionRequest.id = userConnectionRequestDto.id
@@ -66,10 +69,10 @@ class UserConnectionController {
         } catch (ForbiddenException forbiddenException) {
             response["success"] = false
             response["error"] = forbiddenException.getMessage()
-            log.error("Failed to update connection request '${userConnectionRequestDto.id}': ${forbiddenException.getMessage()}")
+            log.error("${userIdentifier} Failed to update connection request '${userConnectionRequestDto.id}': ${forbiddenException.getMessage()}")
             return new ResponseEntity<>(response, HttpStatus.FORBIDDEN)
         } catch (Exception exception) {
-            log.error("failed to update userConnectionRequest with id ${userConnectionRequestDto.id}: ${exception.getMessage()}")
+            log.error("${userIdentifier} Failed to update userConnectionRequest with id ${userConnectionRequestDto.id}: ${exception.getMessage()}")
             response["success"] = false
             response["error"] = "An error occured! Please try again later"
         }
@@ -100,15 +103,18 @@ class UserConnectionController {
         UserConnectionRequestDto userConnectionRequestDto = new UserConnectionRequestDto()
         userConnectionRequestDto.connectedUserId = connectedUserId.toLong()
 
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
         try {
             def createdUserConnectionRequestDto = userConnectionIntegrationService.createConnectionRequest(userConnectionRequestDto, authentication)
             response["userConnectionRequest"] = createdUserConnectionRequestDto
         } catch (ValidationException validationException) {
-            log.trace(validationException.getMessage())
+            log.trace("${userIdentifier} Failed to create user connection request: "+validationException.getMessage())
             response["success"] = false
             response["error"] = validationException.getMessage()
         } catch (Exception exception) {
-            log.error("failed to create user connection request ${userConnectionRequestDto} : ${exception.getMessage()}")
+            log.error("${userIdentifier} failed to create user connection request ${userConnectionRequestDto} : ${exception.getMessage()}")
             response["success"] = false
             response["error"] = "An error occured! Please try again later"
         }
@@ -144,15 +150,19 @@ class UserConnectionController {
                 connectedUserId.toLong()
         )
 
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+
         try {
             def res = userConnectionIntegrationService.deleteUserConnection(userConnectionDto, authentication)
             response["success"] = res
         } catch (ValidationException validationException) {
-            log.trace(validationException.getMessage())
+            log.trace("${userIdentifier} "+validationException.getMessage())
             response["success"] = false
             response["error"] = validationException.getMessage()
         } catch (Exception exception) {
-            log.error("Failed to delete connection: ${exception.getMessage()}")
+            log.error("${userIdentifier} Failed to delete connection: ${exception.getMessage()}")
             response["success"] = false
             response["error"] = "An error occured! Please try again later"
         }

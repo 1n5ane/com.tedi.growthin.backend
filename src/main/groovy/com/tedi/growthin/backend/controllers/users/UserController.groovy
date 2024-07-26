@@ -3,6 +3,7 @@ package com.tedi.growthin.backend.controllers.users
 import com.tedi.growthin.backend.dtos.users.UserConnectionRequestDto
 import com.tedi.growthin.backend.dtos.users.UserDto
 import com.tedi.growthin.backend.services.UserIntegrationService
+import com.tedi.growthin.backend.services.jwt.JwtService
 import com.tedi.growthin.backend.utils.exception.ForbiddenException
 import com.tedi.growthin.backend.utils.exception.validation.users.UserValidationException
 import com.tedi.growthin.backend.utils.exception.validation.ValidationException
@@ -12,6 +13,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.Authentication
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -34,7 +36,6 @@ class UserController {
 
     @Autowired
     UserIntegrationService userIntegrationService
-
 
 //    TODO: check if 2 users are connected -> if connected return everything -> if not return everything except (phone and email)
 //          if user is admin he will view all the details from admin controller and not from here
@@ -67,22 +68,24 @@ class UserController {
             return new ResponseEntity<>(response, HttpStatus.OK)
         }
         user.id = userId
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
         try {
             def updatedUser = userIntegrationService.updateUser(user, authentication)
             response["user"] = updatedUser
         } catch (ForbiddenException forbiddenException) {
             response["success"] = false
             response["error"] = forbiddenException.getMessage()
-            log.error("Failed to update user '${id}': ${forbiddenException.getMessage()}")
+            log.error("${userIdentifier} Failed to update user '${id}': ${forbiddenException.getMessage()}")
             return new ResponseEntity<>(response, HttpStatus.FORBIDDEN)
         } catch (ValidationException validationException) {
             response["success"] = false
             response["error"] = validationException.getMessage()
-            log.error("Failed to update user '${id}': ${validationException.getMessage()}")
+            log.error("${userIdentifier} Failed to update user '${id}': ${validationException.getMessage()}")
         } catch (Exception exception) {
             response["success"] = false
             response["error"] = "An error occured! Please try again later"
-            log.error("Failed to update user '${id}': ${exception.getMessage()}")
+            log.error("${userIdentifier} Failed to update user '${id}': ${exception.getMessage()}")
         }
 
         return new ResponseEntity<>(response, HttpStatus.OK)
