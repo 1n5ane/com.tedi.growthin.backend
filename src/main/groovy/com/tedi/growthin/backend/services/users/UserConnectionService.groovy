@@ -35,6 +35,31 @@ class UserConnectionService {
     @Autowired
     UserRepository userRepository
 
+
+    Page<UserConnectionRequest> listAllUserConnectionRequestsByStatus(Long userId,
+                                                                      UserConnectionRequestStatus status,
+                                                                      Integer page,
+                                                                      Integer pageSize,
+                                                                      String sortBy,
+                                                                      String order) throws Exception {
+        //requests made by the user with userId
+        //check if userId exists
+        def optionalUser = userRepository.findById(userId)
+
+        if (optionalUser.isEmpty()) {
+            throw new UserConnectionRequestException("User reference id '${userId}' not found")
+        }
+
+        Sort.Direction direction = Sort.Direction.DESC
+        if (order == "asc")
+            direction = Sort.Direction.ASC
+
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy))
+
+        Page<UserConnectionRequest> pageUserConnectionRequest = userConnectionRequestRepository.findAllToUserByUserIdAndStatus(userId, status, pageable)
+        return pageUserConnectionRequest
+    }
+
     Page<UserConnection> listAllUserConnections(Long userId, Integer page, Integer pageSize, String sortBy, String order) throws Exception {
         //check if userId exists
         def optionalUser = userRepository.findById(userId)
@@ -239,7 +264,7 @@ class UserConnectionService {
 
         //check if connectedUserId exists
         Optional<User> optionalUser = userRepository.findById((Long) userConnectionDto.connectedUserId)
-        if(optionalUser.isEmpty()){
+        if (optionalUser.isEmpty()) {
             throw new UserConnectionException("User reference id '${userConnectionDto.connectedUserId}' not found")
         }
 

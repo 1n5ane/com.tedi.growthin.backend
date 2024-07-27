@@ -14,4 +14,7 @@ class UserConnectionListDto implements Serializable{
     //list of maps -> [[userConnectionId: 0, user: ,createdAt],]
     def userConnections
 
+    UserConnectionListDto() {
+        this.userConnections = []
+    }
 }

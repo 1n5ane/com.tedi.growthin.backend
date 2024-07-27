@@ -6,12 +6,14 @@ import com.tedi.growthin.backend.domains.users.UserConnectionRequest
 import com.tedi.growthin.backend.dtos.users.UserConnectionDto
 import com.tedi.growthin.backend.dtos.users.UserConnectionListDto
 import com.tedi.growthin.backend.dtos.users.UserConnectionRequestDto
+import com.tedi.growthin.backend.dtos.users.UserConnectionRequestListDto
 import com.tedi.growthin.backend.services.jwt.JwtService
 import com.tedi.growthin.backend.services.users.UserConnectionService
 import com.tedi.growthin.backend.services.users.UserService
 import com.tedi.growthin.backend.services.validation.ValidationService
 import com.tedi.growthin.backend.utils.exception.ForbiddenException
 import com.tedi.growthin.backend.utils.exception.validation.connections.UserConnectionRequestException
+import com.tedi.growthin.backend.utils.exception.validation.paging.PagingArgumentException
 import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.security.core.Authentication
@@ -31,18 +33,69 @@ class UserConnectionIntegrationService {
     @Autowired
     UserService userService
 
+//    todo: TEST THIS AND THE OTHER FLOWS (MIGHT BREAK THE ENUM TYPE BETWEEN jpa and db...)
+    UserConnectionRequestListDto findAllUserConnectionRequestsByStatus(UserConnectionRequestStatus status,
+                                                                       Integer page,
+                                                                       Integer pageSize,
+                                                                       String sortBy,
+                                                                       String order,
+                                                                       Authentication authentication) throws Exception {
+
+        validationServiceMap["pagingArgumentsValidationService"].validate([
+                "page"    : page,
+                "pageSize": pageSize,
+                "order"   : order.trim()
+        ])
+
+        //validate sortBy here
+        sortBy = sortBy.trim()
+        if (!["id", "createdAt", "updatedAt"].contains(sortBy))
+            throw new PagingArgumentException("SortBy can only be one of [id, createdAt, updatedAt]")
+
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+
+        def userConnectionRequestsPage = userConnectionService.listAllUserConnectionRequestsByStatus(currentLoggedInUserId, status, page, pageSize, sortBy, order.trim())
+
+        UserConnectionRequestListDto userConnectionRequestListDto = new UserConnectionRequestListDto()
+
+        def userDto = userService.getUserById(currentLoggedInUserId)
+        userConnectionRequestListDto.user = userDto
+
+        userConnectionRequestListDto.totalPages = userConnectionRequestsPage.totalPages
+
+        if (userConnectionRequestsPage.isEmpty()) {
+            return userConnectionRequestListDto
+        }
+
+        //fill user connection requests
+
+        List<UserConnectionRequest> userConnectionRequestList = userConnectionRequestsPage.getContent()
+
+        userConnectionRequestList.each { ucr ->
+            userConnectionRequestListDto.requestedBy.add([
+                    "requestId": ucr.id,
+                    "user"     : UserService.userDtoFromUser(ucr.user),
+                    "createdAt": ucr.createdAt,
+                    "updatedAt": ucr.updatedAt
+            ])
+        }
+
+        return userConnectionRequestListDto
+    }
+
     UserConnectionListDto findAllUserConnections(Long userId, Integer page, Integer pageSize, String sortBy, String order, Authentication authentication) throws Exception {
-        if (page < 0) throw new IllegalArgumentException("Page number can't be negative!")
-        if (pageSize <= 0) throw new IllegalArgumentException("Page size can't be negative or zero")
-        if (pageSize > 100) throw new IllegalArgumentException("Page size can't be more than 100")
+
+        validationServiceMap["pagingArgumentsValidationService"].validate([
+                "page"    : page,
+                "pageSize": pageSize,
+                "order"   : order
+        ])
 
         sortBy = sortBy.trim()
         if (!["id", "createdAt"].contains(sortBy))
-            throw new IllegalArgumentException("SortBy can only be one of [id, createdAt]")
-
-        order = order.trim()
-        if (!["asc", "desc"].contains(order))
-            throw new IllegalArgumentException("Order can only be 'asc' or 'desc'")
+            throw new PagingArgumentException("SortBy can only be one of [id, createdAt]")
 
         def userJwtToken = (Jwt) authentication.getCredentials()
         Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
@@ -60,7 +113,6 @@ class UserConnectionIntegrationService {
         def userConnectionsPage = userConnectionService.listAllUserConnections(userId, page, pageSize, sortBy, order)
 
         UserConnectionListDto userConnectionListDto = new UserConnectionListDto()
-        userConnectionListDto.userConnections = []
 
         def userDto = userService.getUserById(userId)
         userConnectionListDto.user = userDto

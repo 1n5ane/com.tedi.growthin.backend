@@ -1,5 +1,6 @@
 package com.tedi.growthin.backend.controllers.users
 
+import com.tedi.growthin.backend.domains.enums.UserConnectionRequestStatus
 import com.tedi.growthin.backend.dtos.users.UserConnectionDto
 import com.tedi.growthin.backend.dtos.users.UserConnectionRequestDto
 import com.tedi.growthin.backend.services.UserConnectionIntegrationService
@@ -73,11 +74,6 @@ class UserConnectionController {
             response["totalPages"] = userConnectionListDto.totalPages
             response["user"] = userConnectionListDto.user
             response["connectedWith"] = userConnectionListDto.userConnections
-        } catch (IllegalArgumentException illegalArgumentException) {
-            //incorrect pagenumber etc ...
-            log.trace("${userIdentifier} ${illegalArgumentException.getMessage()}")
-            response["success"] = false
-            response["error"] = illegalArgumentException.getMessage()
         } catch (ValidationException validationException) {
             log.trace("${userIdentifier} ${validationException.getMessage()}")
             response["success"] = false
@@ -96,7 +92,58 @@ class UserConnectionController {
         return new ResponseEntity<>(response, HttpStatus.OK)
     }
 
-    //TODO: listAllUserConnectionRequests by status
+
+    @GetMapping(value = "/requests", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def listAllUserConnectionRequestsByStatus(@RequestParam(name = "page", defaultValue = "0") Integer page,
+                                              @RequestParam(name = "size", defaultValue = "15") Integer pageSize,
+                                              @RequestParam(name = "sortBy", defaultValue = "id") String sortBy,
+                                              @RequestParam(name = "order", defaultValue = "desc") String order,
+                                              @RequestParam(name = "status", defaultValue = "PENDING") String status,
+                                              Authentication authentication) {
+        //list all currentLoggedInUser requests by status
+        // -> Requests Made to the user by other users
+        def response = [
+                "success"    : true,
+                "hasNextPage": false,
+                "status"     : null,
+                "requestedBy": [], //contains a list of maps -> ex. [["requestId":0, "user": UserDto, "createdAt":..., "updatedAt":...]]
+                "totalPages" : null,
+                "error"      : ""
+        ]
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        def enumStatus
+        try{
+            enumStatus = Enum.valueOf(UserConnectionRequestStatus.class, status)
+        }catch(IllegalArgumentException ignored){
+            log.trace("${userIdentifier} Invalid status '${status}' on listAllConnectionRequestsByStatus.")
+            response["success"] = false
+            response["error"] = "Invalid status ${status} .Status can be PENDING, ACCEPTED or DECLINED".toString() //it's GSTRING
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        try {
+            def userConnectionRequestListDto = userConnectionIntegrationService.findAllUserConnectionRequestsByStatus(enumStatus, page, pageSize, sortBy, order, authentication)
+            response["hasNextPage"] = (page + 1) < userConnectionRequestListDto.totalPages
+            response["totalPages"] = userConnectionRequestListDto.totalPages
+            response["status"] = enumStatus
+            response["requestedBy"] = userConnectionRequestListDto.requestedBy
+        } catch (ValidationException validationException) {
+            log.trace("${userIdentifier} ${validationException.getMessage()}")
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        }  catch (Exception exception) {
+            log.error("${userIdentifier} Failed to list user connections requests for ${JwtService.extractAppUserId(jwtToken)}: ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
 
     @GetMapping(value = "/user/{userId}/exists", produces = "application/json;charset=UTF-8")
     @ResponseBody
