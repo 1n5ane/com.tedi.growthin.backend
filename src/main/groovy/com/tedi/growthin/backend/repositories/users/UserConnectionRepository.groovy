@@ -16,6 +16,9 @@ interface UserConnectionRepository extends PagingAndSortingRepository<UserConnec
 
     //get all user connections (user id in user_ids or connected_user_ids)
 
+    @Query("SELECT uc FROM UserConnection uc where uc.user.id = :userId or uc.connectedUser.id = :userId")
+    Page<UserConnection> findAllByUserId(@Param("userId")Long userId, Pageable pageable)
+
     @Query("SELECT uc FROM UserConnection uc where (uc.user.id = :userId1 and uc.connectedUser.id = :userId2) or (uc.user.id = :userId2 and uc.connectedUser.id = :userId1)")
     Optional<UserConnection> findByUserIds(@Param("userId1") Long userId1, @Param("userId2") Long userId2)
 

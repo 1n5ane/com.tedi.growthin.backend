@@ -102,7 +102,7 @@ class UserService {
         return userDto
     }
 
-    private def static userDtoFromUser(User user) {
+    def static userDtoFromUser(User user) {
         new UserDto(
                 user.id,
                 user.username,

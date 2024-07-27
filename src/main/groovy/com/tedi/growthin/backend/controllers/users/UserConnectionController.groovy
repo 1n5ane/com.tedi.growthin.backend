@@ -14,11 +14,13 @@ import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.Authentication
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.bind.annotation.RestController
 
@@ -32,6 +34,117 @@ class UserConnectionController {
 
     @Autowired
     UserConnectionIntegrationService userConnectionIntegrationService
+
+
+    @GetMapping(value = "/user/{userId}", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def listAllUserConnectionsByUserId(@RequestParam(name = "page", defaultValue = "0") Integer page,
+                                       @RequestParam(name = "size", defaultValue = "15") Integer pageSize,
+                                       @RequestParam(name = "sortBy", defaultValue = "id") String sortBy,
+                                       @RequestParam(name = "order", defaultValue = "desc") String order,
+                                       @PathVariable("userId") String userId,
+                                       Authentication authentication) {
+        def response = [
+                "success"      : true,
+                "hasNextPage"  : false,
+                "user"         : null,
+                "connectedWith": [],
+                "totalPages"   : null,
+                "error"        : ""
+        ]
+
+        try {
+            userId.toLong()
+        } catch (NumberFormatException ignored) {
+            response["success"] = false
+            response["error"] = "Invalid user id '${userId}'.".toString()
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        //if users are connected or user requests his own connections return requested users' connections
+        //else forbidden
+        try {
+            def userConnectionListDto = userConnectionIntegrationService.findAllUserConnections(userId.toLong(), page, pageSize, sortBy, order, authentication)
+            response["hasNextPage"] = (page + 1) < userConnectionListDto.totalPages
+            response["totalPages"] = userConnectionListDto.totalPages
+            response["user"] = userConnectionListDto.user
+            response["connectedWith"] = userConnectionListDto.userConnections
+        } catch (IllegalArgumentException illegalArgumentException) {
+            //incorrect pagenumber etc ...
+            log.trace("${userIdentifier} ${illegalArgumentException.getMessage()}")
+            response["success"] = false
+            response["error"] = illegalArgumentException.getMessage()
+        } catch (ValidationException validationException) {
+            log.trace("${userIdentifier} ${validationException.getMessage()}")
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        } catch (ForbiddenException forbiddenException) {
+            log.trace("${userIdentifier} ${forbiddenException.getMessage()}")
+            response["success"] = false
+            response["error"] = forbiddenException.getMessage()
+            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN)
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to list user connections for ${userId}: ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
+
+    //TODO: listAllUserConnectionRequests by status
+
+    @GetMapping(value = "/user/{userId}/exists", produces = "application/json;charset=UTF-8")
+    @ResponseBody
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    def checkUserConnectionExists(@PathVariable('userId') String userId, Authentication authentication) {
+        //check if current loggedInUser is connected with userId
+        def response = [
+                "success": true,
+                "exists" : false,
+                "error"  : ""
+        ]
+
+        try {
+            userId.toLong()
+        } catch (NumberFormatException ignored) {
+            response["success"] = false
+            response["exists"] = null
+            response["error"] = "Invalid user id '${userId}'.".toString()
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        def userConnectionDto = new UserConnectionDto(
+                null,
+                null,
+                userId.toLong()
+        )
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        try {
+            def exists = userConnectionIntegrationService.checkUserConnectionExists(userConnectionDto, authentication)
+            response["exists"] = exists
+        } catch (ValidationException validationException) {
+            log.trace("${userIdentifier} " + validationException.getMessage())
+            response["success"] = false
+            response["exists"] = null
+            response["error"] = validationException.getMessage()
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to check if users are connected: ${exception.getMessage()}")
+            response["success"] = false
+            response["exists"] = null
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
+
 
     @PutMapping(value = "/{connectionRequestId}", produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
@@ -50,7 +163,7 @@ class UserConnectionController {
             connectionRequestId.toLong()
         } catch (NumberFormatException ignored) {
             response["success"] = false
-            response["error"] = "Invalid connection request id '${connectionRequestId}'."
+            response["error"] = "Invalid connection request id '${connectionRequestId}'.".toString()
             return new ResponseEntity<>(response, HttpStatus.OK)
         }
 
@@ -96,7 +209,7 @@ class UserConnectionController {
             connectedUserId.toLong()
         } catch (NumberFormatException ignored) {
             response["success"] = false
-            response["error"] = "Invalid connection userId"
+            response["error"] = "Invalid connection userId '${connectedUserId}'".toString()
             return new ResponseEntity<>(response, HttpStatus.OK)
         }
 
@@ -110,7 +223,7 @@ class UserConnectionController {
             def createdUserConnectionRequestDto = userConnectionIntegrationService.createConnectionRequest(userConnectionRequestDto, authentication)
             response["userConnectionRequest"] = createdUserConnectionRequestDto
         } catch (ValidationException validationException) {
-            log.trace("${userIdentifier} Failed to create user connection request: "+validationException.getMessage())
+            log.trace("${userIdentifier} Failed to create user connection request: " + validationException.getMessage())
             response["success"] = false
             response["error"] = validationException.getMessage()
         } catch (Exception exception) {
@@ -139,7 +252,7 @@ class UserConnectionController {
             connectedUserId.toLong()
         } catch (NumberFormatException ignored) {
             response["success"] = false
-            response["error"] = "Invalid user id '${connectedUserId}'."
+            response["error"] = "Invalid user id '${connectedUserId}'.".toString()
             return new ResponseEntity<>(response, HttpStatus.OK)
         }
 
@@ -158,7 +271,7 @@ class UserConnectionController {
             def res = userConnectionIntegrationService.deleteUserConnection(userConnectionDto, authentication)
             response["success"] = res
         } catch (ValidationException validationException) {
-            log.trace("${userIdentifier} "+validationException.getMessage())
+            log.trace("${userIdentifier} " + validationException.getMessage())
             response["success"] = false
             response["error"] = validationException.getMessage()
         } catch (Exception exception) {

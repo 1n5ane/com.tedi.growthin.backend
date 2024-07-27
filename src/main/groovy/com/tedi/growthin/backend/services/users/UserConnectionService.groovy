@@ -13,6 +13,10 @@ import com.tedi.growthin.backend.utils.exception.ForbiddenException
 import com.tedi.growthin.backend.utils.exception.validation.connections.UserConnectionException
 import com.tedi.growthin.backend.utils.exception.validation.connections.UserConnectionRequestException
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -30,6 +34,24 @@ class UserConnectionService {
 
     @Autowired
     UserRepository userRepository
+
+    Page<UserConnection> listAllUserConnections(Long userId, Integer page, Integer pageSize, String sortBy, String order) throws Exception {
+        //check if userId exists
+        def optionalUser = userRepository.findById(userId)
+
+        if (optionalUser.isEmpty()) {
+            throw new UserConnectionException("User reference id '${userId}' not found")
+        }
+
+        Sort.Direction direction = Sort.Direction.DESC
+        if (order == "asc")
+            direction = Sort.Direction.ASC
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy))
+
+        Page<UserConnection> pageUserConnection = userConnectionRepository.findAllByUserId(userId, pageable)
+
+        return pageUserConnection
+    }
 
     @Transactional(rollbackFor = Exception.class)
     def createUserConnectionRequest(UserConnectionRequestDto userConnectionRequestDto) throws Exception {
@@ -182,13 +204,13 @@ class UserConnectionService {
 
 
     @Transactional(rollbackFor = Exception.class)
-    def removeUserConnection(UserConnectionDto userConnectionDto) {
+    def removeUserConnection(UserConnectionDto userConnectionDto) throws Exception {
         Optional<UserConnection> optionalUserConnection = userConnectionRepository.findByUserIds(
                 (Long) userConnectionDto.userId,
                 (Long) userConnectionDto.connectedUserId
         )
 
-        if (optionalUserConnection.isEmpty()){
+        if (optionalUserConnection.isEmpty()) {
             throw new UserConnectionException("Users are not connected [userId1 = '${userConnectionDto.userId}', 'userId2 = ${userConnectionDto.connectedUserId}']")
         }
 
@@ -204,12 +226,28 @@ class UserConnectionService {
                 (Long) userConnectionDto.connectedUserId
         )
 
-        if(optionalUserConnectionRequest.isPresent()){
+        if (optionalUserConnectionRequest.isPresent()) {
             def userConnectionRequest = optionalUserConnectionRequest.get()
             userConnectionRequestRepository.deleteById(userConnectionRequest.id)
         }
 
         return true
 
+    }
+
+    def checkUserConnectionExists(UserConnectionDto userConnectionDto) throws Exception {
+
+        //check if connectedUserId exists
+        Optional<User> optionalUser = userRepository.findById((Long) userConnectionDto.connectedUserId)
+        if(optionalUser.isEmpty()){
+            throw new UserConnectionException("User reference id '${userConnectionDto.connectedUserId}' not found")
+        }
+
+        Boolean usersAlreadyConnected = userConnectionRepository.existsUserConnection(
+                (Long) userConnectionDto.userId,
+                (Long) userConnectionDto.connectedUserId
+        )
+
+        return usersAlreadyConnected
     }
 }
