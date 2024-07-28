@@ -4,8 +4,8 @@ import com.tedi.growthin.backend.domains.enums.UserConnectionRequestStatus
 import com.tedi.growthin.backend.domains.users.User
 import com.tedi.growthin.backend.domains.users.UserConnection
 import com.tedi.growthin.backend.domains.users.UserConnectionRequest
-import com.tedi.growthin.backend.dtos.users.UserConnectionDto
-import com.tedi.growthin.backend.dtos.users.UserConnectionRequestDto
+import com.tedi.growthin.backend.dtos.connections.UserConnectionDto
+import com.tedi.growthin.backend.dtos.connections.UserConnectionRequestDto
 import com.tedi.growthin.backend.repositories.users.UserConnectionRepository
 import com.tedi.growthin.backend.repositories.users.UserConnectionRequestRepository
 import com.tedi.growthin.backend.repositories.users.UserRepository

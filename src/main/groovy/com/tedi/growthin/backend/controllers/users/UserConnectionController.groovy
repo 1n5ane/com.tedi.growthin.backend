@@ -1,8 +1,8 @@
 package com.tedi.growthin.backend.controllers.users
 
 import com.tedi.growthin.backend.domains.enums.UserConnectionRequestStatus
-import com.tedi.growthin.backend.dtos.users.UserConnectionDto
-import com.tedi.growthin.backend.dtos.users.UserConnectionRequestDto
+import com.tedi.growthin.backend.dtos.connections.UserConnectionDto
+import com.tedi.growthin.backend.dtos.connections.UserConnectionRequestDto
 import com.tedi.growthin.backend.services.UserConnectionIntegrationService
 import com.tedi.growthin.backend.services.jwt.JwtService
 import com.tedi.growthin.backend.utils.exception.ForbiddenException

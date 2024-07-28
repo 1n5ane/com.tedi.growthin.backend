@@ -2,8 +2,10 @@ package com.tedi.growthin.backend.services
 
 
 import com.tedi.growthin.backend.domains.users.User
+import com.tedi.growthin.backend.dtos.connections.UserConnectionDto
 import com.tedi.growthin.backend.dtos.users.UserDto
 import com.tedi.growthin.backend.services.jwt.JwtService
+import com.tedi.growthin.backend.services.users.UserConnectionService
 import com.tedi.growthin.backend.services.users.UserService
 import com.tedi.growthin.backend.services.validation.UserValidationService
 import com.tedi.growthin.backend.services.validation.ValidationService
@@ -27,7 +29,41 @@ class UserIntegrationService {
     @Autowired
     UserService userService
 
+    @Autowired
+    UserConnectionService userConnectionService
+
 //   TODO: add admin_request table for admin requests on user register
+
+    UserDto getUser(UserDto userDto, Authentication authentication) throws Exception {
+        UserDto user
+        if (userDto.id != null) {
+            user = userService.getUserById((Long) userDto.id)
+        } else if (userDto.email != null && !userDto.email.isEmpty()) {
+            user = userService.getUserByEmail(userDto.email)
+        } else if (userDto.username != null && !userDto.username.isEmpty()) {
+            user = userService.getUserByUsername(userDto.username)
+        } else {
+            throw new UserValidationException("Please provide user id, email or username")
+        }
+
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        //CHECK IF CURRENTLOGGEDIN USER EQUALS WITH FETCHED USER ID
+        if (user != null && currentLoggedInUserId != (user.id as Long)) {
+            //CHECK IF USERS ARE CONNECTED
+            Boolean usersConnected = userConnectionService.checkUserConnectionExists(
+                    new UserConnectionDto(null, currentLoggedInUserId, user.id)
+            )
+            if (!usersConnected){
+                //if users are not connected don't return email and phone
+                user.email = null
+                user.phone = null
+            }
+        }
+
+        return user
+    }
 
     UserDto registerUser(UserDto userDto) throws Exception {
         validationServiceMap['userValidationService'].validate(userDto)

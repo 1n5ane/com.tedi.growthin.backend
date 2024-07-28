@@ -1,6 +1,6 @@
 package com.tedi.growthin.backend.services.validation
 
-import com.tedi.growthin.backend.dtos.users.UserConnectionRequestDto
+import com.tedi.growthin.backend.dtos.connections.UserConnectionRequestDto
 import com.tedi.growthin.backend.utils.exception.validation.ValidationException
 import com.tedi.growthin.backend.utils.exception.validation.connections.UserConnectionRequestException
 import groovy.util.logging.Slf4j

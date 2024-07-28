@@ -3,10 +3,10 @@ package com.tedi.growthin.backend.services
 import com.tedi.growthin.backend.domains.enums.UserConnectionRequestStatus
 import com.tedi.growthin.backend.domains.users.UserConnection
 import com.tedi.growthin.backend.domains.users.UserConnectionRequest
-import com.tedi.growthin.backend.dtos.users.UserConnectionDto
-import com.tedi.growthin.backend.dtos.users.UserConnectionListDto
-import com.tedi.growthin.backend.dtos.users.UserConnectionRequestDto
-import com.tedi.growthin.backend.dtos.users.UserConnectionRequestListDto
+import com.tedi.growthin.backend.dtos.connections.UserConnectionDto
+import com.tedi.growthin.backend.dtos.connections.UserConnectionListDto
+import com.tedi.growthin.backend.dtos.connections.UserConnectionRequestDto
+import com.tedi.growthin.backend.dtos.connections.UserConnectionRequestListDto
 
 import com.tedi.growthin.backend.services.jwt.JwtService
 import com.tedi.growthin.backend.services.users.UserConnectionService

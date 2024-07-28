@@ -1,6 +1,6 @@
 package com.tedi.growthin.backend.controllers.users
 
-import com.tedi.growthin.backend.dtos.users.UserConnectionRequestDto
+
 import com.tedi.growthin.backend.dtos.users.UserDto
 import com.tedi.growthin.backend.services.UserIntegrationService
 import com.tedi.growthin.backend.services.jwt.JwtService
@@ -14,7 +14,6 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.Authentication
 import org.springframework.security.oauth2.jwt.Jwt
-import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -33,18 +32,51 @@ class UserController {
     @Autowired
     UserIntegrationService userIntegrationService
 
-//    TODO: check if 2 users are connected -> if connected return everything -> if not return everything except (phone and email)
-//          if user is admin he will view all the details from admin controller and not from here
-//          (he is also a user -> he will view everything as a user up until he goes to the admin section)
-//    @GetMapping(value = "/{id}", produces = "application/json;charset=UTF-8")
-//    @PreAuthorize("hasRole('ADMIN')")
-//    @ResponseBody
-//    def getUser(@PathVariable("id") String id, Authentication authentication) {
-//        def response = ["success": true,
-//                        "user"   : null,
-//                        "error"  : ""]
-//        return new ResponseEntity<>(response, HttpStatus.OK)
-//    }
+
+    @GetMapping(value = "/{id}", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def getUser(@PathVariable("id") String id, Authentication authentication) {
+        def response = ["success": true,
+                        "user"   : null,
+                        "error"  : ""]
+
+        Long userId
+        try {
+            userId = id.toLong()
+        } catch (NumberFormatException ignored) {
+            response["success"] = false
+            response["error"] = "Invalid user id '${id}'".toString()
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        UserDto userDto = new UserDto()
+        userDto.id = userId
+        try {
+            def user = userIntegrationService.getUser(userDto, authentication)
+            response["user"] = user
+            if (!user) {
+                response["success"] = false
+                response["error"] = "User with id ${userId} was not found".toString()
+                //if user not found -> return 404
+                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND)
+            }
+        } catch (ValidationException validationException) {
+            log.error("${userIdentifier} Failed to get user '${userId}': ${validationException.getMessage()}")
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to get user '${userId}': ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
 
     @PutMapping(value = ["/{id}"], produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")

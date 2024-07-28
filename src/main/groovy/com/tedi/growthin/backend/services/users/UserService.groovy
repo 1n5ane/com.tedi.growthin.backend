@@ -53,7 +53,7 @@ class UserService {
         //in case auth server fails -> resource server creation will be rolled back
         //and error will be returned
         def authServerResponse = userAuthServerService.registerUser(userDto)
-        if(!authServerResponse["success"]){
+        if (!authServerResponse["success"]) {
             throw new UserValidationException("${authServerResponse["error"]}")
         }
         //return resource server registered user entity
@@ -91,6 +91,14 @@ class UserService {
         UserDto userDto = null
         if (optionalUser.isPresent())
             userDto = userDtoFromUser(optionalUser.get())
+        return userDto
+    }
+
+    def getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+        UserDto userDto = null
+        if (user)
+            userDto = userDtoFromUser(user)
         return userDto
     }
 
@@ -145,7 +153,7 @@ class UserService {
         //in case auth server fails -> resource server update will be rolled back
         //and error will be returned
         def authServerResponse = userAuthServerService.updateUser(userDto, jwtToken)
-        if(!authServerResponse["success"]){
+        if (!authServerResponse["success"]) {
             throw new UserValidationException("${authServerResponse["error"]}")
         }
         return userDtoFromUser(user)
