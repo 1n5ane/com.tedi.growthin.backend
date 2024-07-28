@@ -7,6 +7,7 @@ import com.tedi.growthin.backend.dtos.users.UserConnectionDto
 import com.tedi.growthin.backend.dtos.users.UserConnectionListDto
 import com.tedi.growthin.backend.dtos.users.UserConnectionRequestDto
 import com.tedi.growthin.backend.dtos.users.UserConnectionRequestListDto
+
 import com.tedi.growthin.backend.services.jwt.JwtService
 import com.tedi.growthin.backend.services.users.UserConnectionService
 import com.tedi.growthin.backend.services.users.UserService
@@ -33,13 +34,19 @@ class UserConnectionIntegrationService {
     @Autowired
     UserService userService
 
-//    todo: TEST THIS AND THE OTHER FLOWS (MIGHT BREAK THE ENUM TYPE BETWEEN jpa and db...)
-    UserConnectionRequestListDto findAllUserConnectionRequestsByStatus(UserConnectionRequestStatus status,
+
+    //User connection requests made TO or BY The user
+    UserConnectionRequestListDto findAllUserConnectionRequestsByStatus(String requestType,
+                                                                       UserConnectionRequestStatus status,
                                                                        Integer page,
                                                                        Integer pageSize,
                                                                        String sortBy,
                                                                        String order,
                                                                        Authentication authentication) throws Exception {
+
+        if(!["incoming","outgoing"].contains(requestType)){
+            throw new UserConnectionRequestException("requestType can either be incoming or outgoing")
+        }
 
         validationServiceMap["pagingArgumentsValidationService"].validate([
                 "page"    : page,
@@ -56,7 +63,15 @@ class UserConnectionIntegrationService {
         Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
 
 
-        def userConnectionRequestsPage = userConnectionService.listAllUserConnectionRequestsByStatus(currentLoggedInUserId, status, page, pageSize, sortBy, order.trim())
+        def userConnectionRequestsPage = userConnectionService.listAllUserConnectionRequestsByStatus(
+                requestType,
+                currentLoggedInUserId,
+                status,
+                page,
+                pageSize,
+                sortBy,
+                order.trim()
+        )
 
         UserConnectionRequestListDto userConnectionRequestListDto = new UserConnectionRequestListDto()
 
@@ -74,7 +89,7 @@ class UserConnectionIntegrationService {
         List<UserConnectionRequest> userConnectionRequestList = userConnectionRequestsPage.getContent()
 
         userConnectionRequestList.each { ucr ->
-            userConnectionRequestListDto.requestedBy.add([
+            userConnectionRequestListDto.requests.add([
                     "requestId": ucr.id,
                     "user"     : UserService.userDtoFromUser(ucr.user),
                     "createdAt": ucr.createdAt,

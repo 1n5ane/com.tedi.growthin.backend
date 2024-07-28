@@ -93,51 +93,83 @@ class UserConnectionController {
     }
 
 
-    @GetMapping(value = "/requests", produces = "application/json;charset=UTF-8")
+    @GetMapping(value = "/requests/{requestType}", produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @ResponseBody
+    //User connection requests made TO The user -> if type = incoming
+    //User connection requests made BY The user -> if type = outgoing
     def listAllUserConnectionRequestsByStatus(@RequestParam(name = "page", defaultValue = "0") Integer page,
                                               @RequestParam(name = "size", defaultValue = "15") Integer pageSize,
                                               @RequestParam(name = "sortBy", defaultValue = "id") String sortBy,
                                               @RequestParam(name = "order", defaultValue = "desc") String order,
                                               @RequestParam(name = "status", defaultValue = "PENDING") String status,
-                                              Authentication authentication) {
-        //list all currentLoggedInUser requests by status
-        // -> Requests Made to the user by other users
-        def response = [
-                "success"    : true,
-                "hasNextPage": false,
-                "status"     : null,
-                "requestedBy": [], //contains a list of maps -> ex. [["requestId":0, "user": UserDto, "createdAt":..., "updatedAt":...]]
-                "totalPages" : null,
-                "error"      : ""
-        ]
+                                              @PathVariable(name = "requestType") String requestType,
+                                              Authentication authentication
+    ) {
+        def response
+
+        if (!["incoming", "outgoing"].contains(requestType)) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND)
+        } else if (requestType == "incoming") {
+            //list all incoming currentLoggedInUser requests by status
+            response = [
+                    "success"    : true,
+                    "hasNextPage": false,
+                    "status"     : null,
+                    "requestedBy": [], //contains a list of maps -> ex. [["requestId":0, "user": UserDto, "createdAt":..., "updatedAt":...]]
+                    "totalPages" : null,
+                    "error"      : ""
+            ]
+        } else {
+            //list all outgoing currentLoggedInUser requests by status
+            response = [
+                    "success"    : true,
+                    "hasNextPage": false,
+                    "status"     : null,
+                    "requestedTo": [], //contains a list of maps -> ex. [["requestId":0, "user": UserDto, "createdAt":..., "updatedAt":...]]
+                    "totalPages" : null,
+                    "error"      : ""
+            ]
+        }
 
         def jwtToken = (Jwt) authentication.getCredentials()
         String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
 
         def enumStatus
-        try{
+        try {
             enumStatus = Enum.valueOf(UserConnectionRequestStatus.class, status)
-        }catch(IllegalArgumentException ignored){
-            log.trace("${userIdentifier} Invalid status '${status}' on listAllConnectionRequestsByStatus.")
+        } catch (IllegalArgumentException ignored) {
+            log.trace("${userIdentifier} Invalid status '${status}' on list all ${requestType} connection requests.")
             response["success"] = false
-            response["error"] = "Invalid status ${status} .Status can be PENDING, ACCEPTED or DECLINED".toString() //it's GSTRING
+            response["error"] = "Invalid status ${status} .Status can be PENDING, ACCEPTED or DECLINED".toString()
+            //it's GSTRING
             return new ResponseEntity<>(response, HttpStatus.OK)
         }
 
         try {
-            def userConnectionRequestListDto = userConnectionIntegrationService.findAllUserConnectionRequestsByStatus(enumStatus, page, pageSize, sortBy, order, authentication)
+            def userConnectionRequestListDto = userConnectionIntegrationService.findAllUserConnectionRequestsByStatus(
+                    requestType,
+                    enumStatus,
+                    page,
+                    pageSize,
+                    sortBy,
+                    order,
+                    authentication
+            )
             response["hasNextPage"] = (page + 1) < userConnectionRequestListDto.totalPages
             response["totalPages"] = userConnectionRequestListDto.totalPages
             response["status"] = enumStatus
-            response["requestedBy"] = userConnectionRequestListDto.requestedBy
+            if(requestType == "incoming")
+                response["requestedBy"] = userConnectionRequestListDto.requests
+            else
+                response["requestedTo"] = userConnectionRequestListDto.requests
+
         } catch (ValidationException validationException) {
             log.trace("${userIdentifier} ${validationException.getMessage()}")
             response["success"] = false
             response["error"] = validationException.getMessage()
-        }  catch (Exception exception) {
-            log.error("${userIdentifier} Failed to list user connections requests for ${JwtService.extractAppUserId(jwtToken)}: ${exception.getMessage()}")
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to list user connections requests of type '${requestType}' for ${JwtService.extractAppUserId(jwtToken)}: ${exception.getMessage()}")
             response["success"] = false
             response["error"] = "An error occured! Please try again later"
         }

@@ -36,12 +36,19 @@ class UserConnectionService {
     UserRepository userRepository
 
 
-    Page<UserConnectionRequest> listAllUserConnectionRequestsByStatus(Long userId,
+    Page<UserConnectionRequest> listAllUserConnectionRequestsByStatus(String requestType,
+                                                                      Long userId,
                                                                       UserConnectionRequestStatus status,
                                                                       Integer page,
                                                                       Integer pageSize,
                                                                       String sortBy,
                                                                       String order) throws Exception {
+
+
+        if(!["incoming","outgoing"].contains(requestType)){
+            throw new UserConnectionRequestException("requestType can either be incoming or outgoing")
+        }
+
         //requests made by the user with userId
         //check if userId exists
         def optionalUser = userRepository.findById(userId)
@@ -56,7 +63,14 @@ class UserConnectionService {
 
         Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy))
 
-        Page<UserConnectionRequest> pageUserConnectionRequest = userConnectionRequestRepository.findAllToUserByUserIdAndStatus(userId, status, pageable)
+        Page<UserConnectionRequest> pageUserConnectionRequest
+
+        if(requestType == "incoming"){
+            pageUserConnectionRequest = userConnectionRequestRepository.findAllToUserByUserIdAndStatus(userId, status.name(), pageable)
+        }else{
+            pageUserConnectionRequest = userConnectionRequestRepository.findAllFromUserByUserIdAndStatus(userId, status.name(), pageable)
+        }
+
         return pageUserConnectionRequest
     }
 

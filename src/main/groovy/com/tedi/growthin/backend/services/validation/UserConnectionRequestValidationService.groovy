@@ -18,10 +18,10 @@ class UserConnectionRequestValidationService implements ValidationService {
 
         request = request as UserConnectionRequestDto
 
-        if(!request.userId)
+        if(request.userId == null || (request.userId as String).isEmpty())
             throw new UserConnectionRequestException("userId can't be empty")
 
-        if(!request.connectedUserId)
+        if(request.connectedUserId == null || (request.connectedUserId as String).isEmpty())
             throw new UserConnectionRequestException("connectedUserId can't be empty")
 
         if(request.userId == request.connectedUserId)
