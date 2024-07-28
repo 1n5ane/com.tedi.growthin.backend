@@ -4,17 +4,20 @@ package com.tedi.growthin.backend.services
 import com.tedi.growthin.backend.domains.users.User
 import com.tedi.growthin.backend.dtos.connections.UserConnectionDto
 import com.tedi.growthin.backend.dtos.users.UserDto
+import com.tedi.growthin.backend.dtos.users.UserListDto
 import com.tedi.growthin.backend.services.jwt.JwtService
 import com.tedi.growthin.backend.services.users.UserConnectionService
 import com.tedi.growthin.backend.services.users.UserService
 import com.tedi.growthin.backend.services.validation.UserValidationService
 import com.tedi.growthin.backend.services.validation.ValidationService
 import com.tedi.growthin.backend.utils.exception.ForbiddenException
+import com.tedi.growthin.backend.utils.exception.validation.paging.PagingArgumentException
 import com.tedi.growthin.backend.utils.exception.validation.users.UserEmailExistsException
 import com.tedi.growthin.backend.utils.exception.validation.users.UserUsernameExistsException
 import com.tedi.growthin.backend.utils.exception.validation.users.UserValidationException
 import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.Page
 import org.springframework.security.core.Authentication
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
@@ -33,6 +36,51 @@ class UserIntegrationService {
     UserConnectionService userConnectionService
 
 //   TODO: add admin_request table for admin requests on user register
+
+    UserListDto findAllUsers(Integer page, Integer pageSize, String sortBy, String order, Authentication authentication) throws Exception {
+
+        validationServiceMap["pagingArgumentsValidationService"].validate([
+                "page"    : page,
+                "pageSize": pageSize,
+                "order"   : order
+        ])
+
+        sortBy = sortBy.trim()
+        if (!["id", "username", "firstName", "lastName", "createdAt"].contains(sortBy))
+            throw new PagingArgumentException("SortBy can only be one of [id, username, firstName, lastName, createdAt]")
+
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        //get UserPage from service
+        Page<User> pageUser = userService.listAllUsers(page, pageSize, sortBy, order)
+
+        UserListDto userListDto = new UserListDto()
+        userListDto.totalPages = pageUser.totalPages
+
+        if (pageUser.isEmpty()) {
+            return userListDto
+        }
+
+        //get which users are connected with user (list of ids)
+        //and for the rest unconnected users -> remove phone and email
+        //phone and email are private -> details that only connected users can view
+
+        def connectedUserIds = userConnectionService.getConnectedUserIdsByUserId(currentLoggedInUserId)
+
+        List<User> userList = pageUser.getContent()
+
+        userList.each {u ->
+            if(!connectedUserIds.contains(u.id) && (u.id != currentLoggedInUserId)){
+                //if not connected
+                u.email = null
+                u.phone = null
+            }
+            userListDto.users.add(UserService.userDtoFromUser(u))
+        }
+
+        return userListDto
+    }
 
     UserDto getUser(UserDto userDto, Authentication authentication) throws Exception {
         UserDto user
@@ -55,7 +103,7 @@ class UserIntegrationService {
             Boolean usersConnected = userConnectionService.checkUserConnectionExists(
                     new UserConnectionDto(null, currentLoggedInUserId, user.id)
             )
-            if (!usersConnected){
+            if (!usersConnected) {
                 //if users are not connected don't return email and phone
                 user.email = null
                 user.phone = null

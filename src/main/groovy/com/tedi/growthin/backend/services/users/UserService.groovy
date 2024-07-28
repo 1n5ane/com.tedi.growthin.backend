@@ -8,6 +8,10 @@ import com.tedi.growthin.backend.repositories.users.UserRepository
 import com.tedi.growthin.backend.services.utils.DateTimeService
 import com.tedi.growthin.backend.utils.exception.validation.users.UserValidationException
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -126,13 +130,23 @@ class UserService {
         )
     }
 
-    def listAllUsers() {
+    def listAllUsers(Integer page, Integer pageSize, String sortBy, String order) throws Exception {
         //list all app users (not auth server users)
+
+        Sort.Direction direction = Sort.Direction.DESC
+        if (order == "asc")
+            direction = Sort.Direction.ASC
+
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy))
+
+        Page<User> pageUser = userRepository.findAll(pageable)
+
+        return pageUser
     }
 
     // a jwt token is provided because auth server is updated too!
     @Transactional(rollbackFor = Exception.class)
-    def updateUser(UserDto userDto, String jwtToken) {
+    def updateUser(UserDto userDto, String jwtToken) throws Exception {
         User user = new User(
                 userDto.id as Long,
                 userDto.username,

@@ -35,6 +35,10 @@ class UserConnectionService {
     @Autowired
     UserRepository userRepository
 
+    List<Long> getConnectedUserIdsByUserId(Long userId) throws Exception{
+        return userConnectionRepository.findAllConnectedUserIdsByUserId(userId)
+    }
+
 
     Page<UserConnectionRequest> listAllUserConnectionRequestsByStatus(String requestType,
                                                                       Long userId,

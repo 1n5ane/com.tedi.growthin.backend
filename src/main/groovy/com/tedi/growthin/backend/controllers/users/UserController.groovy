@@ -33,6 +33,53 @@ class UserController {
     UserIntegrationService userIntegrationService
 
 
+    @GetMapping(value = "/search", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def searchUsersBySearchTerm() {
+        //return list of user usernames + ids that contain the search term in their username
+    }
+
+    @GetMapping(value = ["/", ""], produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    //list all users
+    //on connected users also include email + phone
+    def listAllUsers(@RequestParam(name = "page", defaultValue = "0") Integer page,
+                     @RequestParam(name = "size", defaultValue = "15") Integer pageSize,
+                     @RequestParam(name = "sortBy", defaultValue = "id") String sortBy,
+                     @RequestParam(name = "order", defaultValue = "desc") String order,
+                     Authentication authentication) {
+
+        def response = [
+                "success"    : true,
+                "hasNextPage": false,
+                "users"      : [],
+                "totalPages" : null,
+                "error"      : ""
+        ]
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        try{
+            def userListDto = userIntegrationService.findAllUsers(page, pageSize, sortBy, order, authentication)
+            response["hasNextPage"] = (page + 1) < userListDto.totalPages
+            response["totalPages"] = userListDto.totalPages
+            response["users"] = userListDto.users
+        }catch (ValidationException validationException) {
+            log.trace("${userIdentifier} ${validationException.getMessage()}")
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        }catch(Exception exception){
+            log.error("${userIdentifier} Failed to list all users: ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
+
     @GetMapping(value = "/{id}", produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @ResponseBody
