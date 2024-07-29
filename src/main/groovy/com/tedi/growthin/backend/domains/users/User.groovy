@@ -45,6 +45,9 @@ class User implements Serializable {
     @Column(nullable = false)
     Boolean isAdmin = false
 
+    @Column(nullable = false)
+    Boolean locked = false
+
     @Column(length = 100)
     String country
 
@@ -96,6 +99,20 @@ class User implements Serializable {
         this.updatedAt = updatedAt
     }
 
+    User(Long id, String username, String email, String firstName, String lastName, String phone, String area, String country, Boolean isAdmin, Boolean locked,OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+        this.id = id
+        this.username = username
+        this.email = email
+        this.firstName = firstName
+        this.lastName = lastName
+        this.phone = phone
+        this.area = area
+        this.country = country
+        this.isAdmin = isAdmin
+        this.createdAt = createdAt
+        this.updatedAt = updatedAt
+    }
+
     User() {}
 
     boolean equals(o) {
@@ -112,6 +129,7 @@ class User implements Serializable {
         if (id != user.id) return false
         if (isAdmin != user.isAdmin) return false
         if (lastName != user.lastName) return false
+        if (locked != user.locked) return false
         if (phone != user.phone) return false
         if (updatedAt != user.updatedAt) return false
         if (username != user.username) return false
@@ -129,26 +147,10 @@ class User implements Serializable {
         result = 31 * result + (phone != null ? phone.hashCode() : 0)
         result = 31 * result + (area != null ? area.hashCode() : 0)
         result = 31 * result + (isAdmin != null ? isAdmin.hashCode() : 0)
+        result = 31 * result + (locked != null ? locked.hashCode() : 0)
         result = 31 * result + (country != null ? country.hashCode() : 0)
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0)
         result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0)
         return result
-    }
-
-    @Override
-    public String toString() {
-        return "User{" +
-                "id=" + id +
-                ", username='" + username + '\'' +
-                ", email='" + email + '\'' +
-                ", firstName='" + firstName + '\'' +
-                ", lastName='" + lastName + '\'' +
-                ", phone='" + phone + '\'' +
-                ", area='" + area + '\'' +
-                ", isAdmin=" + isAdmin +
-                ", country='" + country + '\'' +
-                ", createdAt=" + createdAt +
-                ", updatedAt=" + updatedAt +
-                '}';
     }
 }

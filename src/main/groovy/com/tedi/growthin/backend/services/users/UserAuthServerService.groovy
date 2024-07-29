@@ -30,9 +30,9 @@ class UserAuthServerService {
     def updateUser(UserDto userDto, String jwtToken) throws Exception {
         def userUrl = endpointsConfiguration.getAuthServerBaseUserEndpoint()
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + jwtToken);
-        headers.setContentType(MediaType.APPLICATION_JSON); // Ensure Content-Type is set correctly
+        HttpHeaders headers = new HttpHeaders()
+        headers.set("Authorization", "Bearer " + jwtToken)
+        headers.setContentType(MediaType.APPLICATION_JSON) // Ensure Content-Type is set correctly
 
         HttpEntity httpEntity = new HttpEntity(userDto, headers)
         ResponseEntity<HashMap> response = restTemplate.exchange(
@@ -41,6 +41,29 @@ class UserAuthServerService {
                 httpEntity,
                 HashMap.class
         )
+        return response.getBody()
+    }
+
+    def searchUserByUsername(String username, String jwtToken) throws Exception {
+        def userUrl = endpointsConfiguration.getAuthServerUserSearchByUsernameEndpoint()
+
+        HttpHeaders headers = new HttpHeaders()
+        headers.set("Authorization", "Bearer " + jwtToken)
+        headers.setContentType(MediaType.APPLICATION_JSON) // Ensure Content-Type is set correctly
+
+        HttpEntity httpEntity = new HttpEntity(headers)
+
+        URI uri = UriComponentsBuilder
+                .fromHttpUrl(userUrl)
+                .queryParam("username", username)
+                .build()
+                .toUri()
+
+        ResponseEntity<HashMap> response = restTemplate.exchange(
+                uri,
+                HttpMethod.GET,
+                httpEntity,
+                HashMap.class)
         return response.getBody()
     }
 

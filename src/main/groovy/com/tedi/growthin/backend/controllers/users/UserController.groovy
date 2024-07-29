@@ -128,6 +128,8 @@ class UserController {
     @PutMapping(value = ["/{id}"], produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @ResponseBody
+    //from this entry point user can only update his own info (both admin and user)
+    //user details can be updated from admin controller (only by admins)
     def updateUser(@PathVariable("id") String id, @RequestBody UserDto user, Authentication authentication) {
         Long userId
         def response = [

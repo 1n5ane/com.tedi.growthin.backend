@@ -22,6 +22,34 @@ class UserDto implements Serializable {
     OffsetDateTime createdAt
     OffsetDateTime updatedAt
 
+    Boolean locked
+
+    UserDto(def id,
+            String username,
+            String name,
+            String surname,
+            String email,
+            List<String> authorities,
+            String phone,
+            String country,
+            String area,
+            Boolean locked,
+            OffsetDateTime createdAt,
+            OffsetDateTime updatedAt) {
+        this.id = id
+        this.username = username
+        this.name = name
+        this.surname = surname
+        this.email = email
+        this.authorities = authorities
+        this.phone = phone
+        this.country = country
+        this.area = area
+        this.locked = locked
+        this.createdAt = createdAt
+        this.updatedAt = updatedAt
+    }
+
     UserDto(def id,
             String username,
             String password,

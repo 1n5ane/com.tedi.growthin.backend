@@ -81,7 +81,15 @@ class JwtDecoderFilter extends OncePerRequestFilter {
                     !(jwtUriConfiguration.issuerUri).contains(claimsMap["iss"] as String)) {
                 throw new Exception("Issuer don't match with issuer's uri in config")
             }
-            claimsMap["appUserId"] = userService.getUserByUsername(claimsMap['sub'] as String).id
+            def userDto = userService.getUserByUsername(claimsMap['sub'] as String)
+            if(userDto != null) {
+                claimsMap["appUserId"] = userDto.id
+            }else{
+                //user is registered in ouath server but not in application
+                log.trace("User with username '${claimsMap['sub'] as String}' is registered in auth server but not in app. Must register to continue.")
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED)
+                return
+            }
             Jwt oauth2Jwt = new Jwt(
                     jwt,
                     new Date(claimsMap['iat'] as Long).toInstant(),

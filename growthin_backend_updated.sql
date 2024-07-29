@@ -38,6 +38,7 @@ CREATE TABLE public.users (
 	country varchar(100),
 	area varchar(255),
 	is_admin boolean NOT NULL DEFAULT false,
+    locked boolean NOT NULL DEFAULT false,
 	created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone,
 	CONSTRAINT users_pk PRIMARY KEY (id),

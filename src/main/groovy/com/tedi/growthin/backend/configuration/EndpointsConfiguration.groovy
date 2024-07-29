@@ -23,4 +23,8 @@ class EndpointsConfiguration {
     String getAuthServerUserExistsEndpoint(){
         return authServer+"/user/exists"
     }
+
+    String getAuthServerUserSearchByUsernameEndpoint(){
+        return authServer+"/user/search"
+    }
 }

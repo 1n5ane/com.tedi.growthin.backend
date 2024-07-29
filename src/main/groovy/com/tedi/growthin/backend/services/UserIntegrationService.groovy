@@ -46,8 +46,8 @@ class UserIntegrationService {
         ])
 
         sortBy = sortBy.trim()
-        if (!["id", "username", "firstName", "lastName", "createdAt"].contains(sortBy))
-            throw new PagingArgumentException("SortBy can only be one of [id, username, firstName, lastName, createdAt]")
+        if (!["id", "username", "firstName", "lastName", "createdAt", "updatedAt"].contains(sortBy))
+            throw new PagingArgumentException("SortBy can only be one of [id, username, firstName, lastName, createdAt, updatedAt]")
 
         def userJwtToken = (Jwt) authentication.getCredentials()
         Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
@@ -157,9 +157,9 @@ class UserIntegrationService {
     UserDto updateUser(UserDto user, Authentication authentication) throws Exception {
         def userJwtToken = (Jwt) authentication.getCredentials()
 
-        //get user from username contained in token
+        //get user by appId contained in token
         //users and admins can only update their own details
-        //admins can only ban users not alter their details
+        //admins can update users' details from admin controller
         Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
 
         //check if requested id to update match with his id or else return forbidden
@@ -169,9 +169,12 @@ class UserIntegrationService {
         if (!JwtService.extractAuthorities(userJwtToken).contains('ROLE_ADMIN')) {
             //if user has role user -> can't update authorities
             user.authorities = ['ROLE_USER']
+        }else{
+            user.authorities = ['ROLE_USER', 'ROLE_ADMIN']
         }
 
-        //todo: check if there was change in userdata to update (avoid unecessary updates)
+        user.locked = null
+
         //validate input
         validationServiceMap['userValidationService'].validate(user)
 
