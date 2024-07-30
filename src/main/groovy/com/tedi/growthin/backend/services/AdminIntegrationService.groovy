@@ -1,6 +1,10 @@
 package com.tedi.growthin.backend.services
 
+import com.tedi.growthin.backend.domains.enums.AdminRequestStatus
 import com.tedi.growthin.backend.domains.users.User
+import com.tedi.growthin.backend.domains.users.UserAdminRequest
+import com.tedi.growthin.backend.dtos.admins.AdminRequestDto
+import com.tedi.growthin.backend.dtos.admins.AdminRequestListDto
 import com.tedi.growthin.backend.dtos.users.UserDto
 import com.tedi.growthin.backend.dtos.users.UserListDto
 import com.tedi.growthin.backend.services.admins.users.AdminUserService
@@ -61,7 +65,7 @@ class AdminIntegrationService extends UserIntegrationService {
 
         List<User> userList = pageUser.getContent()
 
-        userList.each {u ->
+        userList.each { u ->
             userListDto.users.add(UserService.userDtoFromUser(u))
         }
 
@@ -93,23 +97,23 @@ class AdminIntegrationService extends UserIntegrationService {
 
         List<User> userList = pageUser.getContent()
 
-        userList.each {u ->
+        userList.each { u ->
             userListDto.users.add(UserService.userDtoFromUser(u))
         }
 
         return userListDto
     }
 
-    def updateUserLocked(UserDto userDto, Authentication authentication, Boolean lock) throws Exception{
+    def updateUserLocked(UserDto userDto, Authentication authentication, Boolean lock) throws Exception {
         def user = this.getUser(userDto, authentication)
 
-        if(user == null){
+        if (user == null) {
             def providedField
-            if(userDto.id!=null){
+            if (userDto.id != null) {
                 providedField = userDto.id
-            }else if(userDto.username!=null){
+            } else if (userDto.username != null) {
                 providedField = userDto.username
-            }else{
+            } else {
                 providedField = userDto.email
             }
             throw new UserValidationException("User '${providedField}' was not found")
@@ -120,5 +124,69 @@ class AdminIntegrationService extends UserIntegrationService {
         def updatedUserDto = adminUserService.updateUser(user, userJwtToken.tokenValue)
 //        log.info("Successfully set restriction to '${lock}' for user with id ${user.id}")
         return updatedUserDto
+    }
+
+    AdminRequestListDto findAllAdminRequestsByStatus(AdminRequestStatus status,
+                                                     Integer page,
+                                                     Integer pageSize,
+                                                     String sortBy,
+                                                     String order,
+                                                     Authentication authentication) throws Exception {
+        validationServiceMap["pagingArgumentsValidationService"].validate([
+                "page"    : page,
+                "pageSize": pageSize,
+                "order"   : order.trim()
+        ])
+
+        //validate sortBy here
+        sortBy = sortBy.trim()
+        if (!["id", "createdAt", "updatedAt"].contains(sortBy))
+            throw new PagingArgumentException("SortBy can only be one of [id, createdAt, updatedAt]")
+
+//        def userJwtToken = (Jwt) authentication.getCredentials()
+//        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+
+        def userAdminRequestPage = adminUserService.listAllAdminUserRequestsByStatus(
+                status,
+                page,
+                pageSize,
+                sortBy,
+                order.trim()
+        )
+
+        AdminRequestListDto adminRequestListDto = new AdminRequestListDto()
+
+        adminRequestListDto.totalPages = userAdminRequestPage.totalPages
+
+        if (userAdminRequestPage.isEmpty()) {
+            return adminRequestListDto
+        }
+
+        //fill user admin requests
+
+        List<UserAdminRequest> userAdminRequestList = userAdminRequestPage.getContent()
+
+        userAdminRequestList.each { uar ->
+            adminRequestListDto.requests.add([
+                    "requestId": uar.id,
+                    "user"     : UserService.userDtoFromUser(uar.user),
+                    "curatedBy": uar.curatedByAdmin ? UserService.userDtoFromUser(uar.curatedByAdmin) : null,
+                    "createdAt": uar.createdAt,
+                    "updatedAt": uar.updatedAt
+            ])
+        }
+
+        return adminRequestListDto
+
+    }
+
+//    TODO: here
+    def updateUserAdminRequest(AdminRequestDto adminRequestDto, Authentication authentication) throws Exception {
+
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInAdminId = JwtService.extractAppUserId(userJwtToken)
+
+
     }
 }

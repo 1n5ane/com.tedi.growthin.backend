@@ -1111,4 +1111,4 @@ ON DELETE RESTRICT ON UPDATE CASCADE;
 insert into users values (DEFAULT,'admin-hardcoded','admin-hardcoded@gmail.com','admin','admin','69xxxxxxxx');
 insert into user_action_types (id,type) values (0,'NEW'),(1,'UPDATE');
 CREATE CAST (varchar AS public."UserConnectionRequestStatus") WITH INOUT AS IMPLICIT;
-CREATE CAST (public."UserConnectionRequestStatus" AS varchar) WITH INOUT AS IMPLICIT;
+CREATE CAST (varchar AS public."AdminRequestStatus") WITH INOUT AS IMPLICIT;

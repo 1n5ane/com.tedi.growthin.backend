@@ -15,4 +15,7 @@ interface UserAdminRequestRepository extends PagingAndSortingRepository<UserAdmi
 
     @Query(value = "SELECT uar FROM UserAdminRequest uar where uar.user.id=:userId")
     UserAdminRequest findByUserId(@Param("userId") Long userId)
+
+    @Query(value = "SELECT uar FROM UserAdminRequest uar where CAST(uar.status AS STRING) = :status")
+    Page<UserAdminRequest> findAllByStatus(@Param("status") String status, Pageable pageable)
 }
