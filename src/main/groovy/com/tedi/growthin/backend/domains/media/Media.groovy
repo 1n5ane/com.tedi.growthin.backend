@@ -15,6 +15,8 @@ import jakarta.persistence.Temporal
 import jakarta.persistence.TemporalType
 import org.hibernate.annotations.CreationTimestamp
 
+import java.time.OffsetDateTime
+
 @Entity
 @Table(name = "media")
 class Media implements Serializable {
@@ -37,12 +39,12 @@ class Media implements Serializable {
     @Column
     Boolean isDeleted = false
 
-    @Column
+    @Column(updatable = false)
     @CreationTimestamp
     @Temporal(value = TemporalType.TIMESTAMP)
-    Date createdAt
+    OffsetDateTime createdAt
 
-    Media(Long id, User user, MediaType mediaType, byte[] data, Boolean isDeleted, Date createdAt) {
+    Media(Long id, User user, MediaType mediaType, byte[] data, Boolean isDeleted, OffsetDateTime createdAt) {
         this.id = id
         this.user = user
         this.mediaType = mediaType

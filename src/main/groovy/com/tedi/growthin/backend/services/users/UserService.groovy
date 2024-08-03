@@ -41,7 +41,12 @@ class UserService {
                 userDto.surname,
                 (userDto.phone && !userDto.phone.isEmpty()) ? userDto.phone : null,
                 (userDto.area && !userDto.area.isEmpty()) ? userDto.area : null,
-                (userDto.country && !userDto.country.isEmpty()) ? userDto.country : null
+                (userDto.country && !userDto.country.isEmpty()) ? userDto.country : null,
+                userDto.isEmailPublic == null ? false : userDto.isEmailPublic,
+                userDto.isPhonePublic == null ? false : userDto.isPhonePublic,
+                userDto.isAreaPublic == null ? false : userDto.isAreaPublic,
+                userDto.isCountryPublic == null ? false : userDto.isCountryPublic,
+                false
         )
 
         //create user to resource server
@@ -127,7 +132,32 @@ class UserService {
                 user.area,
                 user.locked,
                 user.createdAt,
-                user.updatedAt
+                user.updatedAt,
+                user.isPhonePublic,
+                user.isEmailPublic,
+                user.isCountryPublic,
+                user.isAreaPublic
+        )
+    }
+
+    def static userDtoFromUserWithHiddenPrivateFields(User user) {
+        new UserDto(
+                user.id,
+                user.username,
+                user.firstName,
+                user.lastName,
+                user.isEmailPublic ? user.email : null,
+                user.isAdmin ? ['ROLE_USER', 'ROLE_ADMIN'] : ['ROLE_USER'],
+                user.isPhonePublic ? user.phone : null,
+                user.isCountryPublic ? user.country : null,
+                user.isAreaPublic ? user.area : null,
+                user.locked,
+                user.createdAt,
+                user.updatedAt,
+                user.isPhonePublic,
+                user.isEmailPublic,
+                user.isCountryPublic,
+                user.isAreaPublic
         )
     }
 
@@ -172,6 +202,11 @@ class UserService {
             updated = true
         }
 
+        if (userDto.isEmailPublic != null && preUpdatedUser.isEmailPublic != userDto.isEmailPublic) {
+            preUpdatedUser.isEmailPublic = userDto.isEmailPublic
+            updated = true
+        }
+
         if ((userDto.name != null && !userDto.name.isEmpty()) && (preUpdatedUser.firstName != userDto.name)) {
             preUpdatedUser.firstName = userDto.name
             updated = true
@@ -187,13 +222,28 @@ class UserService {
             updated = true
         }
 
+        if (userDto.isPhonePublic != null && preUpdatedUser.isPhonePublic != userDto.isPhonePublic) {
+            preUpdatedUser.isPhonePublic = userDto.isPhonePublic
+            updated = true
+        }
+
         if ((userDto.area != null) && (preUpdatedUser.area != userDto.area)) {
             preUpdatedUser.area = userDto.area
             updated = true
         }
 
+        if (userDto.isAreaPublic != null && preUpdatedUser.isAreaPublic != userDto.isAreaPublic) {
+            preUpdatedUser.isAreaPublic = userDto.isAreaPublic
+            updated = true
+        }
+
         if ((userDto.country != null) && (preUpdatedUser.country != userDto.country)) {
             preUpdatedUser.country = userDto.country
+            updated = true
+        }
+
+        if (userDto.isCountryPublic != null && preUpdatedUser.isCountryPublic != userDto.isCountryPublic) {
+            preUpdatedUser.isCountryPublic = userDto.isCountryPublic
             updated = true
         }
 
@@ -205,7 +255,7 @@ class UserService {
         if (userDto.locked != null) {
             preUpdatedUser.locked = userDto.locked
             updated = true
-        }else{
+        } else {
             userDto.locked = preUpdatedUser.locked
         }
 

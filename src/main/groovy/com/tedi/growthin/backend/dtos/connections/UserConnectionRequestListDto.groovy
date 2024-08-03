@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class UserConnectionRequestListDto implements Serializable{
     Integer totalPages
-    def user //user the connection requests made to
+    def user //user the connection requests made from/to
     def requests ////contains a list of maps -> ex. [["requestId":0, "user": UserDto, "createdAt":..., "updatedAt":...]]
 
     UserConnectionRequestListDto() {

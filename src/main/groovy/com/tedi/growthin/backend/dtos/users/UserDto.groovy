@@ -15,10 +15,14 @@ class UserDto implements Serializable {
     String name
     String surname
     String email
+    Boolean isEmailPublic
     List<String> authorities
     String phone
+    Boolean isPhonePublic
     String country
+    Boolean isCountryPublic
     String area
+    Boolean isAreaPublic
     OffsetDateTime createdAt
     OffsetDateTime updatedAt
 
@@ -35,7 +39,11 @@ class UserDto implements Serializable {
             String area,
             Boolean locked,
             OffsetDateTime createdAt,
-            OffsetDateTime updatedAt) {
+            OffsetDateTime updatedAt,
+            Boolean isPhonePublic = false,
+            Boolean isEmailPublic = false,
+            Boolean isCountryPublic = false,
+            Boolean isAreaPublic = false) {
         this.id = id
         this.username = username
         this.name = name
@@ -48,6 +56,10 @@ class UserDto implements Serializable {
         this.locked = locked
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.isPhonePublic = isPhonePublic
+        this.isEmailPublic = isEmailPublic
+        this.isCountryPublic = isCountryPublic
+        this.isAreaPublic = isAreaPublic
     }
 
     UserDto(def id,
@@ -60,6 +72,10 @@ class UserDto implements Serializable {
             String phone = null,
             String country = null,
             String area = null,
+            Boolean isEmailPublic = false,
+            Boolean isPhonePublic = false,
+            Boolean isCountryPublic = false,
+            Boolean isAreaPublic = false,
             OffsetDateTime createdAt = null,
             OffsetDateTime updatedAt = null) {
         this.id = id
@@ -74,6 +90,10 @@ class UserDto implements Serializable {
         this.area = area
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.isEmailPublic = isEmailPublic
+        this.isPhonePublic = isPhonePublic
+        this.isCountryPublic = isCountryPublic
+        this.isAreaPublic = isAreaPublic
     }
 
     UserDto(def id,
@@ -85,6 +105,10 @@ class UserDto implements Serializable {
             String phone = null,
             String country = null,
             String area = null,
+            Boolean isEmailPublic = false,
+            Boolean isPhonePublic = false,
+            Boolean isCountryPublic = false,
+            Boolean isAreaPublic = false,
             OffsetDateTime createdAt = null,
             OffsetDateTime updatedAt = null) {
         this.id = id
@@ -99,6 +123,10 @@ class UserDto implements Serializable {
         this.area = area
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.isEmailPublic = isEmailPublic
+        this.isPhonePublic = isPhonePublic
+        this.isCountryPublic = isCountryPublic
+        this.isAreaPublic = isAreaPublic
     }
 
     UserDto(String username,
@@ -109,6 +137,10 @@ class UserDto implements Serializable {
             String phone = null,
             String country = null,
             String area = null,
+            Boolean isEmailPublic = false,
+            Boolean isPhonePublic = false,
+            Boolean isCountryPublic = false,
+            Boolean isAreaPublic = false,
             OffsetDateTime createdAt = null,
             OffsetDateTime updatedAt = null) {
         this.id = null
@@ -123,9 +155,13 @@ class UserDto implements Serializable {
         this.area = area
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.isEmailPublic = isEmailPublic
+        this.isPhonePublic = isPhonePublic
+        this.isCountryPublic = isCountryPublic
+        this.isAreaPublic = isAreaPublic
     }
 
-    UserDto(){}
+    UserDto() {}
 
 
     @Override
@@ -137,12 +173,17 @@ class UserDto implements Serializable {
                 ", name='" + name + '\'' +
                 ", surname='" + surname + '\'' +
                 ", email='" + email + '\'' +
+                ", isEmailPublic=" + isEmailPublic +
                 ", authorities=" + authorities +
                 ", phone='" + phone + '\'' +
+                ", isPhonePublic=" + isPhonePublic +
                 ", country='" + country + '\'' +
+                ", isCountryPublic=" + isCountryPublic +
                 ", area='" + area + '\'' +
+                ", isAreaPublic=" + isAreaPublic +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
+                ", locked=" + locked +
                 '}';
     }
 }

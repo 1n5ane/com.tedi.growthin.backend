@@ -181,12 +181,15 @@ class AdminIntegrationService extends UserIntegrationService {
 
     }
 
-//    TODO: here
     def updateUserAdminRequest(AdminRequestDto adminRequestDto, Authentication authentication) throws Exception {
 
         def userJwtToken = (Jwt) authentication.getCredentials()
         Long currentLoggedInAdminId = JwtService.extractAppUserId(userJwtToken)
 
+        adminRequestDto.curatedByAdminId = currentLoggedInAdminId
 
+        //also grants privileges in case admin request is accepted
+        def updatedAdminRequest = adminUserService.updateAdminUserRequest(adminRequestDto, userJwtToken.tokenValue)
+        return updatedAdminRequest
     }
 }

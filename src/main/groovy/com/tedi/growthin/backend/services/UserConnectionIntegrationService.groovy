@@ -7,7 +7,7 @@ import com.tedi.growthin.backend.dtos.connections.UserConnectionDto
 import com.tedi.growthin.backend.dtos.connections.UserConnectionListDto
 import com.tedi.growthin.backend.dtos.connections.UserConnectionRequestDto
 import com.tedi.growthin.backend.dtos.connections.UserConnectionRequestListDto
-
+import com.tedi.growthin.backend.dtos.users.UserDto
 import com.tedi.growthin.backend.services.jwt.JwtService
 import com.tedi.growthin.backend.services.users.UserConnectionService
 import com.tedi.growthin.backend.services.users.UserService
@@ -88,13 +88,38 @@ class UserConnectionIntegrationService {
 
         List<UserConnectionRequest> userConnectionRequestList = userConnectionRequestsPage.getContent()
 
-        userConnectionRequestList.each { ucr ->
-            userConnectionRequestListDto.requests.add([
-                    "requestId": ucr.id,
-                    "user"     : UserService.userDtoFromUser(ucr.user),
-                    "createdAt": ucr.createdAt,
-                    "updatedAt": ucr.updatedAt
-            ])
+        def isRequestTypeIncoming = requestType == "incoming"
+
+        if(status == UserConnectionRequestStatus.PENDING || status == UserConnectionRequestStatus.DECLINED) {
+            //hide private user fields
+            userConnectionRequestList.each { ucr ->
+                def user
+                if (isRequestTypeIncoming)
+                    user = ucr.user
+                else
+                    user = ucr.connectedUser
+                userConnectionRequestListDto.requests.add([
+                        "requestId": ucr.id,
+                        "user"     : UserService.userDtoFromUserWithHiddenPrivateFields(user),
+                        "createdAt": ucr.createdAt,
+                        "updatedAt": ucr.updatedAt
+                ])
+            }
+        }else{
+            //accepted requests -> show private user fields
+            userConnectionRequestList.each { ucr ->
+                def user
+                if (isRequestTypeIncoming)
+                    user = ucr.user
+                else
+                    user = ucr.connectedUser
+                userConnectionRequestListDto.requests.add([
+                        "requestId": ucr.id,
+                        "user"     : UserService.userDtoFromUser(user),
+                        "createdAt": ucr.createdAt,
+                        "updatedAt": ucr.updatedAt
+                ])
+            }
         }
 
         return userConnectionRequestListDto

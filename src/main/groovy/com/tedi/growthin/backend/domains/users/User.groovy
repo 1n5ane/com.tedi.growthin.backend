@@ -14,6 +14,9 @@ import org.hibernate.annotations.CreationTimestamp
 
 import java.time.OffsetDateTime
 
+//TODO: Add profile pic + isPublic for email and phone
+//      Admins can view all details from admin controller
+//      All other non connected users won't be able to view isPublic=false
 @Entity
 @Embeddable
 @Table(name = "users")
@@ -30,6 +33,9 @@ class User implements Serializable {
     @Column(unique = true, nullable = false, length = 255)
     String email
 
+    @Column(name = "is_email_public", nullable = false)
+    Boolean isEmailPublic = false
+
     @Column(nullable = false, length = 255)
     String firstName
 
@@ -39,8 +45,14 @@ class User implements Serializable {
     @Column(length = 255)
     String phone
 
+    @Column(name = "is_phone_public", nullable = false)
+    Boolean isPhonePublic = false
+
     @Column(length = 255)
     String area
+
+    @Column(name = "is_area_public", nullable = false)
+    Boolean isAreaPublic = false
 
     @Column(nullable = false)
     Boolean isAdmin = false
@@ -51,6 +63,9 @@ class User implements Serializable {
     @Column(length = 100)
     String country
 
+    @Column(name = "is_country_public", nullable = false)
+    Boolean isCountryPublic = false
+
     @Column(updatable = false)
     @CreationTimestamp
     @Temporal(value = TemporalType.TIMESTAMP)
@@ -60,7 +75,19 @@ class User implements Serializable {
     @Temporal(value = TemporalType.TIMESTAMP)
     OffsetDateTime updatedAt
 
-    User(String username, String email, String firstName, String lastName, String phone, String area, String country, Boolean isAdmin = false, OffsetDateTime updatedAt = null) {
+    User(String username,
+         String email,
+         String firstName,
+         String lastName,
+         String phone,
+         String area,
+         String country,
+         Boolean isEmailPublic = false,
+         Boolean isPhonePublic = false,
+         Boolean isAreaPublic = false,
+         Boolean isCountryPublic = false,
+         Boolean isAdmin = false,
+         OffsetDateTime updatedAt = null) {
         this.username = username
         this.email = email
         this.firstName = firstName
@@ -70,9 +97,26 @@ class User implements Serializable {
         this.country = country
         this.isAdmin = isAdmin
         this.updatedAt = updatedAt
+        this.isEmailPublic = isEmailPublic
+        this.isPhonePublic = isPhonePublic
+        this.isAreaPublic = isAreaPublic
+        this.isCountryPublic = isCountryPublic
     }
 
-    User(Long id, String username, String email, String firstName, String lastName, String phone, String area, String country, Boolean isAdmin = false, OffsetDateTime updatedAt = null) {
+    User(Long id,
+         String username,
+         String email,
+         String firstName,
+         String lastName,
+         String phone,
+         String area,
+         String country,
+         Boolean isEmailPublic = false,
+         Boolean isPhonePublic = false,
+         Boolean isAreaPublic = false,
+         Boolean isCountryPublic = false,
+         Boolean isAdmin = false,
+         OffsetDateTime updatedAt = null) {
         this.id = id
         this.username = username
         this.email = email
@@ -83,9 +127,27 @@ class User implements Serializable {
         this.country = country
         this.isAdmin = isAdmin
         this.updatedAt = updatedAt
+        this.isEmailPublic = isEmailPublic
+        this.isPhonePublic = isPhonePublic
+        this.isAreaPublic = isAreaPublic
+        this.isCountryPublic = isCountryPublic
     }
 
-    User(Long id, String username, String email, String firstName, String lastName, String phone, String area, String country, Boolean isAdmin, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+    User(Long id,
+         String username,
+         String email,
+         String firstName,
+         String lastName,
+         String phone,
+         String area,
+         String country,
+         Boolean isAdmin,
+         OffsetDateTime createdAt,
+         OffsetDateTime updatedAt,
+         Boolean isEmailPublic = false,
+         Boolean isPhonePublic = false,
+         Boolean isAreaPublic = false,
+         Boolean isCountryPublic = false) {
         this.id = id
         this.username = username
         this.email = email
@@ -97,9 +159,28 @@ class User implements Serializable {
         this.isAdmin = isAdmin
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.isEmailPublic = isEmailPublic
+        this.isPhonePublic = isPhonePublic
+        this.isAreaPublic = isAreaPublic
+        this.isCountryPublic = isCountryPublic
     }
 
-    User(Long id, String username, String email, String firstName, String lastName, String phone, String area, String country, Boolean isAdmin, Boolean locked,OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+    User(Long id,
+         String username,
+         String email,
+         String firstName,
+         String lastName,
+         String phone,
+         String area,
+         String country,
+         Boolean isAdmin,
+         Boolean locked,
+         OffsetDateTime createdAt,
+         OffsetDateTime updatedAt,
+         Boolean isEmailPublic = false,
+         Boolean isPhonePublic = false,
+         Boolean isAreaPublic = false,
+         Boolean isCountryPublic = false) {
         this.id = id
         this.username = username
         this.email = email
@@ -111,6 +192,10 @@ class User implements Serializable {
         this.isAdmin = isAdmin
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.isEmailPublic = isEmailPublic
+        this.isPhonePublic = isPhonePublic
+        this.isAreaPublic = isAreaPublic
+        this.isCountryPublic = isCountryPublic
     }
 
     User() {}
@@ -128,6 +213,10 @@ class User implements Serializable {
         if (firstName != user.firstName) return false
         if (id != user.id) return false
         if (isAdmin != user.isAdmin) return false
+        if (isAreaPublic != user.isAreaPublic) return false
+        if (isCountryPublic != user.isCountryPublic) return false
+        if (isEmailPublic != user.isEmailPublic) return false
+        if (isPhonePublic != user.isPhonePublic) return false
         if (lastName != user.lastName) return false
         if (locked != user.locked) return false
         if (phone != user.phone) return false
@@ -142,13 +231,17 @@ class User implements Serializable {
         result = (id != null ? id.hashCode() : 0)
         result = 31 * result + (username != null ? username.hashCode() : 0)
         result = 31 * result + (email != null ? email.hashCode() : 0)
+        result = 31 * result + (isEmailPublic != null ? isEmailPublic.hashCode() : 0)
         result = 31 * result + (firstName != null ? firstName.hashCode() : 0)
         result = 31 * result + (lastName != null ? lastName.hashCode() : 0)
         result = 31 * result + (phone != null ? phone.hashCode() : 0)
+        result = 31 * result + (isPhonePublic != null ? isPhonePublic.hashCode() : 0)
         result = 31 * result + (area != null ? area.hashCode() : 0)
+        result = 31 * result + (isAreaPublic != null ? isAreaPublic.hashCode() : 0)
         result = 31 * result + (isAdmin != null ? isAdmin.hashCode() : 0)
         result = 31 * result + (locked != null ? locked.hashCode() : 0)
         result = 31 * result + (country != null ? country.hashCode() : 0)
+        result = 31 * result + (isCountryPublic != null ? isCountryPublic.hashCode() : 0)
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0)
         result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0)
         return result

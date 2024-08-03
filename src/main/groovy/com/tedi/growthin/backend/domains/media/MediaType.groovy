@@ -15,6 +15,12 @@ class MediaType implements Serializable{
     @Column(nullable = false)
     String name
 
+    MediaType() {}
+
+    MediaType(Integer id, String name) {
+        this.id = id
+        this.name = name
+    }
 
     @Override
     public String toString() {

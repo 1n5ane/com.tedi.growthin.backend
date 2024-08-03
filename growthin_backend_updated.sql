@@ -32,11 +32,15 @@ CREATE TABLE public.users (
 	id bigint NOT NULL DEFAULT nextval('public.users_id_seq'::regclass),
 	username varchar(25) NOT NULL,
 	email varchar(255) NOT NULL,
+    is_email_public boolean not null DEFAULT false,
 	first_name varchar(255) NOT NULL,
 	last_name varchar(255) NOT NULL,
 	phone varchar(255),
+    is_phone_public boolean not null DEFAULT false,
 	country varchar(100),
+    is_country_public boolean not null DEFAULT false,
 	area varchar(255),
+    is_area_public boolean not null DEFAULT false,
 	is_admin boolean NOT NULL DEFAULT false,
     locked boolean NOT NULL DEFAULT false,
 	created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -54,12 +58,18 @@ ALTER TABLE public.users OWNER TO postgres;
 CREATE TABLE public.user_profiles (
 	user_id bigint NOT NULL,
 	job_field text,
+    is_job_field_public boolean not null default false,
 	profile_pic_id bigint,
 	description text,
+    is_description_public boolean not null default false,
 	age smallint,
+    is_age_public boolean not null default false,
 	education text,
+    is_education_public boolean not null default false,
 	country varchar(50),
+    is_country_public boolean not null default false,
 	cv_document_id bigint,
+    is_cv_document_public boolean not null default false,
 	created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at timestamp with time zone,
 	CONSTRAINT user_profiles_pk PRIMARY KEY (user_id),
@@ -1108,7 +1118,8 @@ REFERENCES public.users (id) MATCH SIMPLE
 ON DELETE RESTRICT ON UPDATE CASCADE;
 -- ddl-end --
 
-insert into users values (DEFAULT,'admin-hardcoded','admin-hardcoded@gmail.com','admin','admin','69xxxxxxxx');
+insert into users values (DEFAULT,'admin-hardcoded','admin-hardcoded@gmail.com','admin','admin','69xxxxxxxx','GR',NULL,true);
 insert into user_action_types (id,type) values (0,'NEW'),(1,'UPDATE');
+insert into media_types values (0, 'image/jpeg'),(1, 'image/png'),(2 , 'application/pdf');
 CREATE CAST (varchar AS public."UserConnectionRequestStatus") WITH INOUT AS IMPLICIT;
 CREATE CAST (varchar AS public."AdminRequestStatus") WITH INOUT AS IMPLICIT;

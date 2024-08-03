@@ -33,6 +33,7 @@ class UserController {
     UserIntegrationService userIntegrationService
 
 
+    //TODO: heeereeee for autocomplete + (make a seperate one that returns the whole user entities for searching)
     @GetMapping(value = "/search", produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @ResponseBody

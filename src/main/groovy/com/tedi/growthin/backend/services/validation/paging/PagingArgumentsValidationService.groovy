@@ -1,5 +1,6 @@
-package com.tedi.growthin.backend.services.validation
+package com.tedi.growthin.backend.services.validation.paging
 
+import com.tedi.growthin.backend.services.validation.ValidationService
 import com.tedi.growthin.backend.utils.exception.validation.ValidationException
 import com.tedi.growthin.backend.utils.exception.validation.paging.PagingArgumentException
 import groovy.util.logging.Slf4j

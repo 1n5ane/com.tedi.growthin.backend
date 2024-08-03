@@ -8,7 +8,7 @@ import com.tedi.growthin.backend.dtos.users.UserListDto
 import com.tedi.growthin.backend.services.jwt.JwtService
 import com.tedi.growthin.backend.services.users.UserConnectionService
 import com.tedi.growthin.backend.services.users.UserService
-import com.tedi.growthin.backend.services.validation.UserValidationService
+import com.tedi.growthin.backend.services.validation.users.UserValidationService
 import com.tedi.growthin.backend.services.validation.ValidationService
 import com.tedi.growthin.backend.utils.exception.ForbiddenException
 import com.tedi.growthin.backend.utils.exception.validation.paging.PagingArgumentException
@@ -34,8 +34,6 @@ class UserIntegrationService {
 
     @Autowired
     UserConnectionService userConnectionService
-
-//   TODO: add admin_request table for admin requests on user register
 
     UserListDto findAllUsers(Integer page, Integer pageSize, String sortBy, String order, Authentication authentication) throws Exception {
 
@@ -70,11 +68,21 @@ class UserIntegrationService {
 
         List<User> userList = pageUser.getContent()
 
-        userList.each {u ->
-            if(!connectedUserIds.contains(u.id) && (u.id != currentLoggedInUserId)){
+        userList.each { u ->
+            def isConnected = connectedUserIds.contains(u.id)
+            if ((!isConnected) && (u.id != currentLoggedInUserId)) {
                 //if not connected
-                u.email = null
-                u.phone = null
+                if (!u.isEmailPublic)
+                    u.email = null
+
+                if (!u.isPhonePublic)
+                    u.phone = null
+
+                if (!u.isAreaPublic)
+                    u.area = null
+
+                if (!u.isCountryPublic)
+                    u.country = null
             }
             userListDto.users.add(UserService.userDtoFromUser(u))
         }
@@ -103,10 +111,20 @@ class UserIntegrationService {
             Boolean usersConnected = userConnectionService.checkUserConnectionExists(
                     new UserConnectionDto(null, currentLoggedInUserId, user.id)
             )
+            //TODO: check if fields are public and return in that case
             if (!usersConnected) {
                 //if users are not connected don't return email and phone
-                user.email = null
-                user.phone = null
+                if (!user.isEmailPublic)
+                    user.email = null
+
+                if (!user.isPhonePublic)
+                    user.phone = null
+
+                if (!user.isAreaPublic)
+                    user.area = null
+
+                if (!user.isCountryPublic)
+                    user.country = null
             }
         }
 
@@ -149,7 +167,12 @@ class UserIntegrationService {
                 ["ROLE_USER"],
                 user.phone,
                 user.country,
-                user.area
+                user.area,
+                user.isEmailPublic,
+                user.isPhonePublic,
+                user.isCountryPublic,
+                user.isAreaPublic,
+                user.createdAt
         )
 
     }
@@ -169,7 +192,7 @@ class UserIntegrationService {
         if (!JwtService.extractAuthorities(userJwtToken).contains('ROLE_ADMIN')) {
             //if user has role user -> can't update authorities
             user.authorities = ['ROLE_USER']
-        }else{
+        } else {
             user.authorities = ['ROLE_USER', 'ROLE_ADMIN']
         }
 
