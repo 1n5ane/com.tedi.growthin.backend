@@ -40,7 +40,7 @@ class MediaDto implements Serializable {
                 "id=" + id +
                 ", userId=" + userId +
                 ", mediaTypeDto=" + mediaTypeDto +
-                ", data=" + Arrays.toString(data) +
+                ", data=[...]"+
                 ", isDeleted=" + isDeleted +
                 ", createdAt=" + createdAt +
                 '}';

@@ -2,6 +2,7 @@ package com.tedi.growthin.backend.dtos.users
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.tedi.growthin.backend.dtos.media.MediaDto
 
 import java.time.OffsetDateTime
 
@@ -23,6 +24,7 @@ class UserDto implements Serializable {
     Boolean isCountryPublic
     String area
     Boolean isAreaPublic
+    MediaDto profilePic
     OffsetDateTime createdAt
     OffsetDateTime updatedAt
 
@@ -43,7 +45,8 @@ class UserDto implements Serializable {
             Boolean isPhonePublic = false,
             Boolean isEmailPublic = false,
             Boolean isCountryPublic = false,
-            Boolean isAreaPublic = false) {
+            Boolean isAreaPublic = false,
+            MediaDto profilePicMedia = null) {
         this.id = id
         this.username = username
         this.name = name
@@ -60,6 +63,7 @@ class UserDto implements Serializable {
         this.isEmailPublic = isEmailPublic
         this.isCountryPublic = isCountryPublic
         this.isAreaPublic = isAreaPublic
+        this.profilePic = profilePicMedia
     }
 
     UserDto(def id,
@@ -77,7 +81,8 @@ class UserDto implements Serializable {
             Boolean isCountryPublic = false,
             Boolean isAreaPublic = false,
             OffsetDateTime createdAt = null,
-            OffsetDateTime updatedAt = null) {
+            OffsetDateTime updatedAt = null,
+            MediaDto profilePicMedia = null) {
         this.id = id
         this.username = username
         this.password = password
@@ -110,7 +115,8 @@ class UserDto implements Serializable {
             Boolean isCountryPublic = false,
             Boolean isAreaPublic = false,
             OffsetDateTime createdAt = null,
-            OffsetDateTime updatedAt = null) {
+            OffsetDateTime updatedAt = null,
+            MediaDto profilePicMedia = null) {
         this.id = id
         this.username = username
         this.password = null
@@ -127,6 +133,7 @@ class UserDto implements Serializable {
         this.isPhonePublic = isPhonePublic
         this.isCountryPublic = isCountryPublic
         this.isAreaPublic = isAreaPublic
+        this.profilePic = profilePicMedia
     }
 
     UserDto(String username,
@@ -142,7 +149,8 @@ class UserDto implements Serializable {
             Boolean isCountryPublic = false,
             Boolean isAreaPublic = false,
             OffsetDateTime createdAt = null,
-            OffsetDateTime updatedAt = null) {
+            OffsetDateTime updatedAt = null,
+            MediaDto profilePicMedia = null) {
         this.id = null
         this.username = username
         this.password = null
@@ -181,6 +189,7 @@ class UserDto implements Serializable {
                 ", isCountryPublic=" + isCountryPublic +
                 ", area='" + area + '\'' +
                 ", isAreaPublic=" + isAreaPublic +
+                ", profilePic=" + profilePic +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
                 ", locked=" + locked +

@@ -5,6 +5,7 @@ import com.tedi.growthin.backend.domains.users.UserAdminRequest
 import com.tedi.growthin.backend.dtos.users.UserDto
 import com.tedi.growthin.backend.repositories.users.UserAdminRequestRepository
 import com.tedi.growthin.backend.repositories.users.UserRepository
+import com.tedi.growthin.backend.services.media.MediaService
 import com.tedi.growthin.backend.services.utils.DateTimeService
 import com.tedi.growthin.backend.utils.exception.validation.users.UserValidationException
 import org.springframework.beans.factory.annotation.Autowired
@@ -136,7 +137,8 @@ class UserService {
                 user.isPhonePublic,
                 user.isEmailPublic,
                 user.isCountryPublic,
-                user.isAreaPublic
+                user.isAreaPublic,
+                user.getProfilePicMedia()?MediaService.mediaDtoFromMedia(user.getProfilePicMedia()):null
         )
     }
 
@@ -157,7 +159,8 @@ class UserService {
                 user.isPhonePublic,
                 user.isEmailPublic,
                 user.isCountryPublic,
-                user.isAreaPublic
+                user.isAreaPublic,
+                user.getProfilePicMedia()?MediaService.mediaDtoFromMedia(user.getProfilePicMedia()):null
         )
     }
 

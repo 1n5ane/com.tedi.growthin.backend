@@ -69,7 +69,7 @@ class MediaService {
         return mediaRepository.findById(id)
     }
 
-    List<Media> findByIds(List<Long> ids){
+    List<Media> findAllByIds(List<Long> ids){
         if(ids.isEmpty())
             return []
 

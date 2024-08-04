@@ -84,6 +84,7 @@ class JwtDecoderFilter extends OncePerRequestFilter {
             def userDto = userService.getUserByUsername(claimsMap['sub'] as String)
             if(userDto != null) {
                 claimsMap["appUserId"] = userDto.id
+                claimsMap["profilePicData"] = userDto.profilePic?Base64.getEncoder().encodeToString(userDto.profilePic.data):null
             }else{
                 //user is registered in ouath server but not in application
                 log.trace("User with username '${claimsMap['sub'] as String}' is registered in auth server but not in app. Must register to continue.")

@@ -1,11 +1,15 @@
 package com.tedi.growthin.backend.domains.users
 
+import com.tedi.growthin.backend.domains.media.Media
 import jakarta.persistence.Column
 import jakarta.persistence.Embeddable
 import jakarta.persistence.Entity
+import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.OneToOne
 import jakarta.persistence.SequenceGenerator
 import jakarta.persistence.Table
 import jakarta.persistence.Temporal
@@ -66,6 +70,9 @@ class User implements Serializable {
     @Column(name = "is_country_public", nullable = false)
     Boolean isCountryPublic = false
 
+    @OneToOne(fetch = FetchType.EAGER, mappedBy = "user")
+    UserProfile userProfile
+
     @Column(updatable = false)
     @CreationTimestamp
     @Temporal(value = TemporalType.TIMESTAMP)
@@ -101,6 +108,10 @@ class User implements Serializable {
         this.isPhonePublic = isPhonePublic
         this.isAreaPublic = isAreaPublic
         this.isCountryPublic = isCountryPublic
+    }
+
+    Media getProfilePicMedia() {
+        return userProfile?.profilePicMedia
     }
 
     User(Long id,
@@ -245,5 +256,29 @@ class User implements Serializable {
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0)
         result = 31 * result + (updatedAt != null ? updatedAt.hashCode() : 0)
         return result
+    }
+
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "id=" + id +
+                ", username='" + username + '\'' +
+                ", email='" + email + '\'' +
+                ", isEmailPublic=" + isEmailPublic +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", phone='" + phone + '\'' +
+                ", isPhonePublic=" + isPhonePublic +
+                ", area='" + area + '\'' +
+                ", isAreaPublic=" + isAreaPublic +
+                ", isAdmin=" + isAdmin +
+                ", locked=" + locked +
+                ", country='" + country + '\'' +
+                ", isCountryPublic=" + isCountryPublic +
+                ", userProfile=" + userProfile +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                '}';
     }
 }

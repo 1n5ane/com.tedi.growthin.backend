@@ -58,6 +58,29 @@ class UserProfileIntegrationService {
         return UserProfileService.userProfileDtoFromUserProfile(userProfile)
     }
 
+    // udpate profile
+    UserProfileDto updateUserProfile(UserProfileDto userProfileDto, Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        // user/admin registers only his own profile
+        userProfileDto.id = currentLoggedInUserId
+        validationServiceMap["userProfileValidationService"].validate(userProfileDto)
+
+        if (userProfileDto.profilePic) {
+            userProfileDto.profilePic.userId = currentLoggedInUserId
+            validationServiceMap["mediaValidationService"].validate(userProfileDto.profilePic)
+        }
+
+        if (userProfileDto.cvDocument) {
+            userProfileDto.cvDocument.userId = currentLoggedInUserId
+            validationServiceMap["mediaValidationService"].validate(userProfileDto.cvDocument)
+        }
+        //if not exists -> register
+        def userProfile = userProfileService.updateUserProfile(userProfileDto)
+        return UserProfileService.userProfileDtoFromUserProfile(userProfile)
+    }
+
     //TODO: check if users are not connected when fetching a user profile-> only return public profile fields
 
     //list all

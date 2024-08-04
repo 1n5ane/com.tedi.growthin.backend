@@ -29,7 +29,7 @@ class Media implements Serializable {
     @JoinColumn(name = "id_users")
     User user
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_media_types")
     MediaType mediaType
 

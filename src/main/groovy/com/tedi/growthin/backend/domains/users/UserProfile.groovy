@@ -18,14 +18,13 @@ import java.time.OffsetDateTime
 @Table(name = "user_profiles")
 class UserProfile implements Serializable {
 
-    //TODO: this is wrong -> CHEEEEEECK
     @Id
     @Column(name = "user_id")
 //  One user has exactly one profile -> profileId == user.id
     Long profileId
 
-    @OneToOne
-    @JoinColumn(name = "user_id")
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
     User user
 
     @Column
@@ -34,7 +33,7 @@ class UserProfile implements Serializable {
     @Column(name = "is_job_field_public", nullable = false)
     Boolean isJobFieldPublic = false
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "profile_pic_id")
     Media profilePicMedia
 

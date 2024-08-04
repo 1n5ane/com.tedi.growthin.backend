@@ -1,6 +1,5 @@
 package com.tedi.growthin.backend.services
 
-
 import com.tedi.growthin.backend.domains.users.User
 import com.tedi.growthin.backend.dtos.connections.UserConnectionDto
 import com.tedi.growthin.backend.dtos.users.UserDto
@@ -111,7 +110,7 @@ class UserIntegrationService {
             Boolean usersConnected = userConnectionService.checkUserConnectionExists(
                     new UserConnectionDto(null, currentLoggedInUserId, user.id)
             )
-            //TODO: check if fields are public and return in that case
+
             if (!usersConnected) {
                 //if users are not connected don't return email and phone
                 if (!user.isEmailPublic)
