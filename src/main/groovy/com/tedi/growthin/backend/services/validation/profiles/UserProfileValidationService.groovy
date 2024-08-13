@@ -1,9 +1,9 @@
-package com.tedi.growthin.backend.services.validation.userProfiles
+package com.tedi.growthin.backend.services.validation.profiles
 
 import com.tedi.growthin.backend.dtos.profiles.UserProfileDto
 import com.tedi.growthin.backend.services.validation.ValidationService
 import com.tedi.growthin.backend.utils.exception.validation.ValidationException
-import com.tedi.growthin.backend.utils.exception.validation.userProfiles.UserProfileException
+import com.tedi.growthin.backend.utils.exception.validation.profiles.UserProfileException
 import groovy.util.logging.Slf4j
 import org.springframework.stereotype.Service
 

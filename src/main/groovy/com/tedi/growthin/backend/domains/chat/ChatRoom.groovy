@@ -18,6 +18,8 @@ import jakarta.persistence.TemporalType
 import jakarta.persistence.UniqueConstraint
 import org.hibernate.annotations.CreationTimestamp
 
+import java.time.OffsetDateTime
+
 @Entity
 @Table(name = "chat_rooms", uniqueConstraints = [
         @UniqueConstraint(
@@ -40,15 +42,23 @@ class ChatRoom implements Serializable{
     @JoinColumn(name = "related_user_id2")
     User user2
 
-    @Column
+    @Column(updatable = false)
     @CreationTimestamp
     @Temporal(value = TemporalType.TIMESTAMP)
-    Date createdAt
+    OffsetDateTime createdAt
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "chatRoom")
     @OrderBy(value = "id DESC")
     List<ChatRoomMessage> chatRoomMessages
 
+    ChatRoom() {}
+
+    ChatRoom(Long id, User user1, User user2, OffsetDateTime createdAt = null) {
+        this.id = id
+        this.user1 = user1
+        this.user2 = user2
+        this.createdAt = null
+    }
 
     @Override
     public String toString() {

@@ -7,7 +7,7 @@ import com.tedi.growthin.backend.dtos.profiles.UserProfileDto
 import com.tedi.growthin.backend.repositories.users.UserProfileRepository
 import com.tedi.growthin.backend.repositories.users.UserRepository
 import com.tedi.growthin.backend.services.media.MediaService
-import com.tedi.growthin.backend.utils.exception.validation.userProfiles.UserProfileException
+import com.tedi.growthin.backend.utils.exception.validation.profiles.UserProfileException
 import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Page

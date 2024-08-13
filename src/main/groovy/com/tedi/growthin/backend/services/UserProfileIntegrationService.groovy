@@ -9,7 +9,7 @@ import com.tedi.growthin.backend.services.users.UserConnectionService
 import com.tedi.growthin.backend.services.users.UserProfileService
 import com.tedi.growthin.backend.services.validation.ValidationService
 import com.tedi.growthin.backend.utils.exception.validation.paging.PagingArgumentException
-import com.tedi.growthin.backend.utils.exception.validation.userProfiles.UserProfileException
+import com.tedi.growthin.backend.utils.exception.validation.profiles.UserProfileException
 import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.security.core.Authentication
