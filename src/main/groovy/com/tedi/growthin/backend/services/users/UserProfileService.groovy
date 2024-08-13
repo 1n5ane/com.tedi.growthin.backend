@@ -3,13 +3,17 @@ package com.tedi.growthin.backend.services.users
 import com.tedi.growthin.backend.domains.media.Media
 import com.tedi.growthin.backend.domains.users.User
 import com.tedi.growthin.backend.domains.users.UserProfile
-import com.tedi.growthin.backend.dtos.userProfiles.UserProfileDto
+import com.tedi.growthin.backend.dtos.profiles.UserProfileDto
 import com.tedi.growthin.backend.repositories.users.UserProfileRepository
 import com.tedi.growthin.backend.repositories.users.UserRepository
 import com.tedi.growthin.backend.services.media.MediaService
 import com.tedi.growthin.backend.utils.exception.validation.userProfiles.UserProfileException
 import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -114,7 +118,7 @@ class UserProfileService {
         if (updated) {
             userProfile.setUpdatedAt(OffsetDateTime.now())
             userProfile = userProfileRepository.save(userProfile)
-        } else{
+        } else {
             log.trace("Profile with id '${userProfile.profileId}' was not updated no changes made")
         }
         return userProfile
@@ -128,14 +132,46 @@ class UserProfileService {
         return updated
     }
 
+    Page<UserProfile> listAllUserProfiles(Integer page, Integer pageSize, String sortBy, String order) throws Exception {
+
+        Sort.Direction direction = Sort.Direction.DESC
+        if (order == "asc")
+            direction = Sort.Direction.ASC
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy))
+        Page<UserProfile> pageUserProfile = userProfileRepository.findAll(pageable)
+        return pageUserProfile
+    }
+
+    Page<UserProfile> searchUserProfilesByUsername(String username, Integer page, Integer pageSize, String sortBy, String order) throws Exception {
+
+        Sort.Direction direction = Sort.Direction.DESC
+        if (order == "asc")
+            direction = Sort.Direction.ASC
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy))
+        Page<UserProfile> pageUserProfile = userProfileRepository.findAllByUsernameLike(username, pageable)
+        return pageUserProfile
+    }
 
     Optional<UserProfile> findById(Long id) throws Exception {
         return userProfileRepository.findById(id)
     }
 
+    Optional<UserProfile> findByUsername(String username) throws Exception {
+        return userProfileRepository.findByUsername(username)
+    }
+
+    List<UserProfile> findByIdsIn(List<Long> ids) throws Exception {
+        return userProfileRepository.findAllByIdsIn(ids)
+    }
+
+    List<UserProfile> findByUsernamesIn(List<String> usernames) throws Exception {
+        return userProfileRepository.findAllByUsernamesIn(usernames)
+    }
+
     static UserProfileDto userProfileDtoFromUserProfile(UserProfile userProfile) {
         return new UserProfileDto(
                 (Long) userProfile.profileId,
+                userProfile.user.username,
                 userProfile.jobField,
                 userProfile.profilePicMedia ? MediaService.mediaDtoFromMedia(userProfile.profilePicMedia) : null,
                 userProfile.cvDocumentMedia ? MediaService.mediaDtoFromMedia(userProfile.cvDocumentMedia) : null,

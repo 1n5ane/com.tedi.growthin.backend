@@ -21,6 +21,9 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
 
+//TODO: user emails are registered as case sensitive
+//      so if an email with capital letters provided -> it will be accepted (it's wrong because emails are not case sensitive)
+//      The same applies for usernames... -> fix
 @Service
 @Slf4j
 class UserIntegrationService {

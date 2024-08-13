@@ -1,6 +1,6 @@
 package com.tedi.growthin.backend.services.validation.userProfiles
 
-import com.tedi.growthin.backend.dtos.userProfiles.UserProfileDto
+import com.tedi.growthin.backend.dtos.profiles.UserProfileDto
 import com.tedi.growthin.backend.services.validation.ValidationService
 import com.tedi.growthin.backend.utils.exception.validation.ValidationException
 import com.tedi.growthin.backend.utils.exception.validation.userProfiles.UserProfileException

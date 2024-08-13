@@ -35,7 +35,7 @@ class UserConnectionService {
     @Autowired
     UserRepository userRepository
 
-    List<Long> getConnectedUserIdsByUserId(Long userId) throws Exception{
+    List<Long> getConnectedUserIdsByUserId(Long userId) throws Exception {
         return userConnectionRepository.findAllConnectedUserIdsByUserId(userId)
     }
 
@@ -49,7 +49,7 @@ class UserConnectionService {
                                                                       String order) throws Exception {
 
 
-        if(!["incoming","outgoing"].contains(requestType)){
+        if (!["incoming", "outgoing"].contains(requestType)) {
             throw new UserConnectionRequestException("requestType can either be incoming or outgoing")
         }
 
@@ -69,9 +69,9 @@ class UserConnectionService {
 
         Page<UserConnectionRequest> pageUserConnectionRequest
 
-        if(requestType == "incoming"){
+        if (requestType == "incoming") {
             pageUserConnectionRequest = userConnectionRequestRepository.findAllToUserByUserIdAndStatus(userId, status.name(), pageable)
-        }else{
+        } else {
             pageUserConnectionRequest = userConnectionRequestRepository.findAllFromUserByUserIdAndStatus(userId, status.name(), pageable)
         }
 
@@ -276,6 +276,16 @@ class UserConnectionService {
 
         return true
 
+    }
+
+    //get connected user ids from userIdsList for userId
+    List<Long> getConnectedUserIdsFromIdList(Long userId, List<Long> userIdsList) throws Exception {
+        return userConnectionRepository.findAllConnectedUserIdsByUserIdList(userId, userIdsList)
+    }
+
+    //get connected user ids from userUsernamesList for userId
+    List<Long> getConnectedUserIdsFromUsernameList(Long userId, List<String> userUsernamesList) throws Exception {
+        return userConnectionRepository.findAllConnectedUserIdsByUserUsernameList(userId, userUsernamesList)
     }
 
     def checkUserConnectionExists(UserConnectionDto userConnectionDto) throws Exception {
