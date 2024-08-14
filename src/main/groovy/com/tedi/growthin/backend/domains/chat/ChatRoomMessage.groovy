@@ -30,7 +30,7 @@ class ChatRoomMessage implements Serializable {
     @JoinColumn(name = "id_chat_rooms", nullable = false)
     ChatRoom chatRoom
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "sender_id", nullable = false)
     User sender
 
@@ -40,7 +40,7 @@ class ChatRoomMessage implements Serializable {
     @Column(nullable = false)
     Boolean isRead = false
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_media")
     Media media
 
@@ -71,7 +71,7 @@ class ChatRoomMessage implements Serializable {
         return "ChatRoomMessage{" +
                 "id=" + id +
                 ", chatRoomId=" + chatRoom?.id +
-                ", sender=" + sender +
+                ", sender=" + sender?.id +
                 ", message='" + message + '\'' +
                 ", isRead=" + isRead +
                 ", media=" + media +
@@ -92,7 +92,7 @@ class ChatRoomMessage implements Serializable {
         if (isRead != that.isRead) return false
         if (media != that.media) return false
         if (message != that.message) return false
-        if (sender != that.sender) return false
+        if (sender?.id != that.sender?.id) return false
         if (updatedAt != that.updatedAt) return false
 
         return true
@@ -101,8 +101,8 @@ class ChatRoomMessage implements Serializable {
     int hashCode() {
         int result
         result = (id != null ? id.hashCode() : 0)
-        result = 31 * result + (chatRoom != null ? chatRoom.hashCode() : 0)
-        result = 31 * result + (sender != null ? sender.hashCode() : 0)
+        result = 31 * result + (chatRoom?.id != null ? chatRoom?.id?.hashCode() : 0)
+        result = 31 * result + (sender?.id != null ? sender?.hashCode() : 0)
         result = 31 * result + (message != null ? message.hashCode() : 0)
         result = 31 * result + (isRead != null ? isRead.hashCode() : 0)
         result = 31 * result + (media != null ? media.hashCode() : 0)

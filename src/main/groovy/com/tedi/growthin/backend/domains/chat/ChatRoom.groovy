@@ -16,6 +16,7 @@ import jakarta.persistence.Table
 import jakarta.persistence.Temporal
 import jakarta.persistence.TemporalType
 import jakarta.persistence.UniqueConstraint
+import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.CreationTimestamp
 
 import java.time.OffsetDateTime
@@ -47,8 +48,9 @@ class ChatRoom implements Serializable{
     @Temporal(value = TemporalType.TIMESTAMP)
     OffsetDateTime createdAt
 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "chatRoom")
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "chatRoom")
     @OrderBy(value = "id DESC")
+    @BatchSize(size = 5)//only get 2 last messages -> not the whole conversation
     List<ChatRoomMessage> chatRoomMessages
 
     ChatRoom() {}

@@ -6,6 +6,7 @@ import com.tedi.growthin.backend.domains.media.Media
 import com.tedi.growthin.backend.domains.users.User
 import com.tedi.growthin.backend.dtos.chats.ChatRoomDto
 import com.tedi.growthin.backend.dtos.chats.ChatRoomMessageDto
+import com.tedi.growthin.backend.dtos.chats.ChatRoomMessagesIsReadDto
 import com.tedi.growthin.backend.repositories.chats.ChatRoomMessageRepository
 import com.tedi.growthin.backend.repositories.chats.ChatRoomRepository
 import com.tedi.growthin.backend.repositories.users.UserConnectionRepository
@@ -14,8 +15,13 @@ import com.tedi.growthin.backend.services.media.MediaService
 import com.tedi.growthin.backend.services.users.UserService
 import com.tedi.growthin.backend.utils.exception.validation.chats.ChatRoomException
 import com.tedi.growthin.backend.utils.exception.validation.chats.ChatRoomMessageException
+import com.tedi.growthin.backend.utils.exception.validation.connections.UserConnectionException
 import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -136,6 +142,61 @@ class ChatRoomService {
         return chatRoomMessageDtoFromChatRoomMessage(chatRoomMessage)
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    Boolean setMessagesIsRead(ChatRoomMessagesIsReadDto chatRoomMessagesIsReadDto) throws Exception {
+        Optional<User> optionalUser1 = userRepository.findById((Long) chatRoomMessagesIsReadDto.senderId)
+        if (optionalUser1.isEmpty())
+            throw new ChatRoomException("User with id '${chatRoomMessagesIsReadDto.senderId}' was not found")
+
+        Optional<User> optionalUser2 = userRepository.findById((Long) chatRoomMessagesIsReadDto.receiverId)
+        if (optionalUser2.isEmpty())
+            throw new ChatRoomException("User with id '${chatRoomMessagesIsReadDto.receiverId}' was not found")
+
+        chatRoomMessageRepository.setIsReadToMessages(
+                chatRoomMessagesIsReadDto.isRead,
+                (Long) chatRoomMessagesIsReadDto.senderId,
+                (Long) chatRoomMessagesIsReadDto.receiverId,
+                chatRoomMessagesIsReadDto.messageIds
+        )
+
+        return true
+    }
+
+    Page<ChatRoom> listAllChatRooms(Long userId, Integer page, Integer pageSize, String sortBy, String order) throws Exception {
+        //check if userId exists
+        def optionalUser = userRepository.findById(userId)
+
+        if (optionalUser.isEmpty()) {
+            throw new ChatRoomException("User reference id '${userId}' not found")
+        }
+
+        Sort.Direction direction = Sort.Direction.DESC
+        if (order == "asc")
+            direction = Sort.Direction.ASC
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy))
+
+        Page<ChatRoom> pageChatRoom = chatRoomRepository.findAllByUserId(userId, pageable)
+
+        return pageChatRoom
+    }
+
+    Page<ChatRoomMessage> listAllChatRoomMessages(Long chatId, Integer page, Integer pageSize, String sortBy, String order) throws Exception {
+        //check if chatId exists
+        Boolean chatRoomExists = chatRoomRepository.existsChatRoom(chatId)
+
+        if(!chatRoomExists){
+            throw new ChatRoomMessageException("Chat room reference id '${chatId}' not found")
+        }
+
+        Sort.Direction direction = Sort.Direction.DESC
+        if (order == "asc")
+            direction = Sort.Direction.ASC
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy))
+
+        Page<ChatRoomMessage> pageChatRoomMessage = chatRoomMessageRepository.findAllByChatRoomId(chatId, pageable)
+        return pageChatRoomMessage
+    }
+
     private ChatRoomDto hidePrivateUserFieldsIfNotConnected(ChatRoom chatRoom) throws Exception {
         Boolean isConnected = true
 
@@ -162,7 +223,7 @@ class ChatRoomService {
                 chatRoomMessage.sender.id == chatRoomMessage.chatRoom.user1.id ? chatRoomMessage.chatRoom.user2.id : chatRoomMessage.chatRoom.user1.id,
                 chatRoomMessage.message,
                 chatRoomMessage.isRead,
-                chatRoomMessage.media?MediaService.mediaDtoFromMedia(chatRoomMessage.media):null,
+                chatRoomMessage.media ? MediaService.mediaDtoFromMedia(chatRoomMessage.media) : null,
                 chatRoomMessage.createdAt,
                 chatRoomMessage.updatedAt
         )
