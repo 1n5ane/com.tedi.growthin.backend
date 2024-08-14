@@ -171,6 +171,14 @@ class UserDto implements Serializable {
 
     UserDto() {}
 
+    static def hidePrivateFields(UserDto userDto){
+        userDto.email = userDto.isEmailPublic ? userDto.email : null
+        userDto.phone = userDto.isPhonePublic ? userDto.phone : null
+        userDto.country = userDto.isCountryPublic ? userDto.country : null
+        userDto.area = userDto.isAreaPublic ? userDto.area : null
+        return userDto
+    }
+
 
     @Override
     public String toString() {

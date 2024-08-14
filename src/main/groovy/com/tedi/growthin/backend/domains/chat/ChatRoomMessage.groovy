@@ -16,8 +16,10 @@ import jakarta.persistence.Temporal
 import jakarta.persistence.TemporalType
 import org.hibernate.annotations.CreationTimestamp
 
+import java.time.OffsetDateTime
+
 @Entity
-@Table(name = "chat_rooms")
+@Table(name = "chat_rooms_data")
 class ChatRoomMessage implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "chat_messages_seq_gen")
@@ -42,21 +44,33 @@ class ChatRoomMessage implements Serializable {
     @JoinColumn(name = "id_media")
     Media media
 
-    @Column
+    @Column(insertable = false, updatable = false)
     @CreationTimestamp
     @Temporal(value = TemporalType.TIMESTAMP)
-    Date createdAt
+    OffsetDateTime createdAt
 
     @Column
     @Temporal(value = TemporalType.TIMESTAMP)
-    Date updatedAt
+    OffsetDateTime updatedAt
 
+    ChatRoomMessage(Long id, ChatRoom chatRoom, User sender, String message, Boolean isRead, Media media, OffsetDateTime createdAt = null, OffsetDateTime updatedAt = null) {
+        this.id = id
+        this.chatRoom = chatRoom
+        this.sender = sender
+        this.message = message
+        this.isRead = isRead
+        this.media = media
+        this.createdAt = createdAt
+        this.updatedAt = updatedAt
+    }
+
+    ChatRoomMessage() {}
 
     @Override
     public String toString() {
         return "ChatRoomMessage{" +
                 "id=" + id +
-                ", chatRoom=" + chatRoom +
+                ", chatRoomId=" + chatRoom?.id +
                 ", sender=" + sender +
                 ", message='" + message + '\'' +
                 ", isRead=" + isRead +
@@ -72,7 +86,7 @@ class ChatRoomMessage implements Serializable {
 
         ChatRoomMessage that = (ChatRoomMessage) o
 
-        if (chatRoom != that.chatRoom) return false
+        if (chatRoom?.id != that.chatRoom?.id) return false
         if (createdAt != that.createdAt) return false
         if (id != that.id) return false
         if (isRead != that.isRead) return false

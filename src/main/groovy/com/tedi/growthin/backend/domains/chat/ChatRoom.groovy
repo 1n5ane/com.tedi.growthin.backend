@@ -34,11 +34,11 @@ class ChatRoom implements Serializable{
     @SequenceGenerator(name = "chat_room_seq_gen", sequenceName = "public.chat_room_seq", allocationSize = 1)
     Long id
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "related_user_id1")
     User user1
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "related_user_id2")
     User user2
 
@@ -67,7 +67,6 @@ class ChatRoom implements Serializable{
                 ", user1=" + user1 +
                 ", user2=" + user2 +
                 ", createdAt=" + createdAt +
-                ", chatRoomMessages=" + chatRoomMessages +
                 '}';
     }
 
@@ -77,7 +76,6 @@ class ChatRoom implements Serializable{
 
         ChatRoom chatRoom = (ChatRoom) o
 
-        if (chatRoomMessages != chatRoom.chatRoomMessages) return false
         if (createdAt != chatRoom.createdAt) return false
         if (id != chatRoom.id) return false
         if (user1 != chatRoom.user1) return false
@@ -92,7 +90,6 @@ class ChatRoom implements Serializable{
         result = 31 * result + (user1 != null ? user1.hashCode() : 0)
         result = 31 * result + (user2 != null ? user2.hashCode() : 0)
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0)
-        result = 31 * result + (chatRoomMessages != null ? chatRoomMessages.hashCode() : 0)
         return result
     }
 }
