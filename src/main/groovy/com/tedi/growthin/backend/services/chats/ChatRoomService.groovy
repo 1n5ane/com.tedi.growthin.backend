@@ -13,6 +13,7 @@ import com.tedi.growthin.backend.repositories.users.UserConnectionRepository
 import com.tedi.growthin.backend.repositories.users.UserRepository
 import com.tedi.growthin.backend.services.media.MediaService
 import com.tedi.growthin.backend.services.users.UserService
+import com.tedi.growthin.backend.utils.exception.ForbiddenException
 import com.tedi.growthin.backend.utils.exception.validation.chats.ChatRoomException
 import com.tedi.growthin.backend.utils.exception.validation.chats.ChatRoomMessageException
 import com.tedi.growthin.backend.utils.exception.validation.connections.UserConnectionException
@@ -57,6 +58,26 @@ class ChatRoomService {
                 relatedUserId1,
                 relatedUserId2
         )
+    }
+
+    Long countAllUnreadChatMessages(Long chatRoomId, Long senderId) throws Exception {
+        if(senderId == null){
+            throw new ChatRoomMessageException("Sender id can't be empty")
+        }
+
+        if(chatRoomId == null){
+            throw new ChatRoomException("Chat room id can't be empty")
+        }
+
+        return chatRoomMessageRepository.countUnreadChatRoomMessagesBySenderId(chatRoomId, senderId)
+    }
+
+    Long countAllChatRoomsWithUnreadMessages(Long userId) throws Exception {
+        if(userId == null){
+            throw new ChatRoomException("User id can't be empty")
+        }
+
+        return chatRoomMessageRepository.countChatRoomsWithUnreadMessagesFromSender(userId)
     }
 
     ChatRoomDto findChatRoomById(Long chatRoomId) throws Exception {
@@ -143,6 +164,12 @@ class ChatRoomService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    Boolean setIsReadToAllChatRoomMessagesBySender(Long chatId, Long senderId, Boolean isRead) throws Exception {
+        chatRoomMessageRepository.setIsReadToAllChatRoomMessagesBySender(chatId, senderId, isRead)
+        return true
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     Boolean setMessagesIsRead(ChatRoomMessagesIsReadDto chatRoomMessagesIsReadDto) throws Exception {
         Optional<User> optionalUser1 = userRepository.findById((Long) chatRoomMessagesIsReadDto.senderId)
         if (optionalUser1.isEmpty())
@@ -184,7 +211,7 @@ class ChatRoomService {
         //check if chatId exists
         Boolean chatRoomExists = chatRoomRepository.existsChatRoom(chatId)
 
-        if(!chatRoomExists){
+        if (!chatRoomExists) {
             throw new ChatRoomMessageException("Chat room reference id '${chatId}' not found")
         }
 
@@ -196,6 +223,38 @@ class ChatRoomService {
         Page<ChatRoomMessage> pageChatRoomMessage = chatRoomMessageRepository.findAllByChatRoomId(chatId, pageable)
         return pageChatRoomMessage
     }
+
+    ChatRoomMessageDto findChatRoomMessage(ChatRoomMessageDto chatRoomMessageDto) throws Exception {
+        def chatRoom
+        if (chatRoomMessageDto.chatRoomId == null) {
+            //if chatRoomId not provided -> find chatroom by related users
+            Optional<ChatRoom> optionalChatRoom = chatRoomRepository.findByRelatedUsers(
+                    (Long) chatRoomMessageDto.senderId, (Long) chatRoomMessageDto.receiverId
+            )
+            if (optionalChatRoom.isEmpty())
+                throw new ChatRoomMessageException("Chat room for users with ids '${chatRoomMessageDto.senderId}', '${chatRoomMessageDto.receiverId}' was not found")
+
+            chatRoom = optionalChatRoom.get()
+        } else {
+            //if chatRoomId provided -> get with chatRoomId
+            Optional<ChatRoom> optionalChatRoom = chatRoomRepository.findById((Long) chatRoomMessageDto.chatRoomId)
+            if (optionalChatRoom.isEmpty())
+                throw new ChatRoomMessageException("Chat room with id '${chatRoomMessageDto.chatRoomId}' was not found")
+            chatRoom = optionalChatRoom.get()
+            def userIds = []
+            userIds.add(chatRoom.user1.id)
+            userIds.add(chatRoom.user2.id)
+            if (!userIds.contains(chatRoomMessageDto.senderId) && !userIds.contains(chatRoomMessageDto.receiverId)) {
+                throw new ForbiddenException("Chat room not related to users with ids '${chatRoomMessageDto.senderId}', '${chatRoomMessageDto.receiverId}'")
+            }
+        }
+
+        Optional<ChatRoomMessage> optionalChatRoomMessage = chatRoomMessageRepository.findByChatRoomIdAndMessageId(chatRoom.id, (Long) chatRoomMessageDto.id)
+        if (optionalChatRoomMessage.isEmpty())
+            return null
+        return chatRoomMessageDtoFromChatRoomMessage(optionalChatRoomMessage.get())
+    }
+
 
     private ChatRoomDto hidePrivateUserFieldsIfNotConnected(ChatRoom chatRoom) throws Exception {
         Boolean isConnected = true

@@ -6,6 +6,7 @@ import com.tedi.growthin.backend.dtos.chats.ChatRoomMessagesIsReadDto
 import com.tedi.growthin.backend.dtos.users.UserDto
 import com.tedi.growthin.backend.services.UserChatIntegrationService
 import com.tedi.growthin.backend.services.jwt.JwtService
+import com.tedi.growthin.backend.utils.exception.ForbiddenException
 import com.tedi.growthin.backend.utils.exception.validation.ValidationException
 import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
@@ -120,6 +121,43 @@ class UserChatController {
 
         return new ResponseEntity<>(response, HttpStatus.OK)
     }
+
+    //set isRead=true to all unread
+    @PostMapping(value = "/{userId}/messages/read-all-unread", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def readAllUnreadChatRoomMessages(@PathVariable("userId") String userId, Authentication authentication) {
+        def response = [
+                "success": true,
+                "error"  : ""
+        ]
+
+        try {
+            userId.toLong()
+        } catch (NumberFormatException ignored) {
+            response["success"] = false
+            response["error"] = "Invalid userId '${userId}'".toString()
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        try {
+            def success = userChatIntegrationService.readAllUnreadChatRoomMessages(userId.toLong(), authentication)
+            response["success"] = success
+        } catch (ValidationException validationException) {
+            log.trace("${userIdentifier} Failed to set isRead=true to all unread messages received by user with id '${userId}': " + validationException.getMessage())
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to set isRead=true to all unread messages received by user with id '${userId}':  ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
+
 
     @PostMapping(value = "/{userId}/messages/read", produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
@@ -252,5 +290,133 @@ class UserChatController {
         return new ResponseEntity<>(response, HttpStatus.OK)
     }
 
-    //listAllUnreadMessages (with paging)
+    @GetMapping(value = "/{userId}/messages/{messageId}", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def getChatRoomMessage(@PathVariable("userId") String userId,
+                           @PathVariable("messageId") String messageId,
+                           Authentication authentication) {
+
+        def response = [
+                "success"        : true,
+                "chatRoomMessage": null,
+                "error"          : ""
+        ]
+
+        try {
+            userId.toLong()
+        } catch (NumberFormatException ignored) {
+            response["success"] = false
+            response["error"] = "Invalid userId '${userId}'".toString()
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        try {
+            messageId.toLong()
+        } catch (NumberFormatException ignored) {
+            response["success"] = false
+            response["error"] = "Invalid messageId '${messageId}'".toString()
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        ChatRoomMessageDto chatRoomMessageDto = new ChatRoomMessageDto()
+        chatRoomMessageDto.receiverId = userId.toLong()
+        chatRoomMessageDto.id = messageId.toLong()
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        try {
+            def chatRoomMessage = userChatIntegrationService.findUserChatRoomMessage(chatRoomMessageDto, authentication)
+            if (chatRoomMessage == null)
+                response["error"] = "Chat room message with id '${messageId}' was not found".toString()
+            response["chatRoomMessage"] = chatRoomMessage
+        } catch (ForbiddenException forbiddenException) {
+            log.trace("${userIdentifier} Forbidden to get user message '${messageId}' with user with id '${userId}': ${forbiddenException.getMessage()}")
+            response["success"] = false
+            response["error"] = "Access is forbidden"
+            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN)
+        } catch (ValidationException validationException) {
+            log.trace("${userIdentifier} Failed to get user message '${messageId}' with user with id '${userId}': ${validationException.getMessage()}")
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to get user message '${messageId}' with user with id '${userId}': ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
+
+    @GetMapping(value = "/{userId}/messages/count-unread", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    //count all unread messages on chat between currentLoggedInUser and userId
+    def countAllUnreadChatMessages(@PathVariable("userId") String userId,
+                                   Authentication authentication) {
+
+        def response = [
+                "success": true,
+                "count"  : null,
+                "error"  : ""
+        ]
+
+        try {
+            userId.toLong()
+        } catch (NumberFormatException ignored) {
+            response["success"] = false
+            response["error"] = "Invalid userId '${userId}'".toString()
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        try {
+            def count = userChatIntegrationService.countAllUnreadChatMessages(userId.toLong(), authentication)
+            response["count"] = count
+        } catch (ValidationException validationException) {
+            log.trace("${userIdentifier} Failed to count all unread messages from user with id '${userId}': ${validationException.getMessage()}")
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to count all unread messages from user with id '${userId}': ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+
+    }
+
+    @GetMapping(value = "/count-unread", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    //count all chats with unread messages
+    def countAllChatsWithUnreadMessages(Authentication authentication) {
+        def response = [
+                "success": true,
+                "count"  : null,
+                "error"  : ""
+        ]
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        try {
+            def count = userChatIntegrationService.countAllChatRoomsWithUnreadMessages(authentication)
+            response["count"] = count
+        } catch (ValidationException validationException) {
+            log.trace("${userIdentifier} Failed to count all chat rooms with unread messages: ${validationException.getMessage()}")
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to count all chat rooms with unread messages:: ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
 }

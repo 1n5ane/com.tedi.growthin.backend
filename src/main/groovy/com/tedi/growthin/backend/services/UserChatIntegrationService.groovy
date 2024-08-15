@@ -120,13 +120,26 @@ class UserChatIntegrationService {
         return newChatRoomMessageDto
     }
 
+    Boolean readAllUnreadChatRoomMessages(Long userId, Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        ChatRoomDto chatRoomDto = chatRoomService.findChatRoomByRelatedUsers(
+                currentLoggedInUserId,
+                userId
+        )
+
+        if (chatRoomDto == null) {
+            throw new ChatRoomException("Chat room not exists for users with ids '${currentLoggedInUserId}', '${userId}'")
+        }
+
+        return chatRoomService.setIsReadToAllChatRoomMessagesBySender((Long) chatRoomDto.id, userId, true)
+    }
+
     //set messageList isRead
     Boolean setIsReadToMessages(ChatRoomMessagesIsReadDto chatRoomMessagesIsReadDto, Authentication authentication) throws Exception {
         def userJwtToken = (Jwt) authentication.getCredentials()
         Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
-
-        String userIdentifier = "[userId = '${currentLoggedInUserId}', username = ${JwtService.extractUsername(userJwtToken)}]"
-
 
         chatRoomMessagesIsReadDto.receiverId = currentLoggedInUserId
 
@@ -246,9 +259,46 @@ class UserChatIntegrationService {
         }
 
         return chatRoomMessageListDto
-
     }
 
-    //listAllUnreadMessages (with paging)
+    ChatRoomMessageDto findUserChatRoomMessage(ChatRoomMessageDto chatRoomMessageDto, Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+        chatRoomMessageDto.senderId = currentLoggedInUserId
+        //check if chat room exists
+        def chatRoomDto = chatRoomService.findChatRoomByRelatedUsers(currentLoggedInUserId, (Long) chatRoomMessageDto.receiverId)
+
+        if (chatRoomDto == null) {
+            throw new ChatRoomMessageException("Chat room not exists for users with ids '${currentLoggedInUserId}', '${chatRoomMessageDto.receiverId}'")
+        }
+
+        chatRoomMessageDto.chatRoomId = chatRoomDto.id
+
+        return chatRoomService.findChatRoomMessage(chatRoomMessageDto)
+    }
+
+    Long countAllUnreadChatMessages(Long userId, Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        ChatRoomDto chatRoomDto = chatRoomService.findChatRoomByRelatedUsers(
+                userId,
+                currentLoggedInUserId
+        )
+
+        if (chatRoomDto == null) {
+            throw new ChatRoomException("Chat room not exists for users with ids '${userId}', '${currentLoggedInUserId}'")
+        }
+
+        return chatRoomService.countAllUnreadChatMessages((Long) chatRoomDto.id, userId)
+    }
+
+    Long countAllChatRoomsWithUnreadMessages(Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        //count all chhat rooms with unread with receiver currentLoggedInUser
+        return chatRoomService.countAllChatRoomsWithUnreadMessages(currentLoggedInUserId)
+    }
 
 }
