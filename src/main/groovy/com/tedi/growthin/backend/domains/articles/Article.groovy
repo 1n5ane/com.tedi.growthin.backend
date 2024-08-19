@@ -12,11 +12,17 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
+import jakarta.persistence.OneToMany
+import jakarta.persistence.OrderBy
 import jakarta.persistence.SequenceGenerator
 import jakarta.persistence.Table
 import jakarta.persistence.Temporal
 import jakarta.persistence.TemporalType
+import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.CreationTimestamp
+import org.hibernate.annotations.Where
+
+import java.time.OffsetDateTime
 
 @Entity
 @Table(name = "articles")
@@ -27,7 +33,7 @@ class Article implements Serializable {
     @SequenceGenerator(name = "articles_id_seq_gen", sequenceName = "public.articles_id_seq", allocationSize = 1)
     Long id
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "id_users")
     User user
 
@@ -37,35 +43,105 @@ class Article implements Serializable {
     @Column(nullable = false)
     String body
 
+    //one article has many media
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "article")
+    @OrderBy(value = "order ASC")
+    List<ArticleMedia> articleMedias
+
+    //one article has many comments
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "article")
+    @OrderBy(value = "createdAt DESC")
+    @BatchSize(size = 10)
+    @Where(clause = "is_deleted = false")
+    //only get 10 most recent (not deleted) comments -> not all the comments (there is an endpoint for that)
+    List<ArticleComment> articleComments
+
+    //one article has many reactions
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "article")
+    @OrderBy(value = "createdAt DESC")
+    @BatchSize(size = 20)
+    //only get 20 most recent article reactions -> not all the reaction (there is a controller for that)
+    List<ArticleReaction> articleReactions
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "public_status", columnDefinition = "public.\"PublicStatus\"", nullable = false)
     PublicStatus publicStatus = PublicStatus.PUBLIC
 
     @Column(nullable = false)
     Boolean isDeleted = false
 
-    @Column
+    @Column(updatable = false)
     @CreationTimestamp
     @Temporal(value = TemporalType.TIMESTAMP)
-    Date createdAt
+    OffsetDateTime createdAt
 
     @Column
     @Temporal(value = TemporalType.TIMESTAMP)
-    Date updatedAt
+    OffsetDateTime updatedAt
 
+    Article(Long id,
+            User user,
+            String title,
+            String body,
+            List<ArticleMedia> articleMedias,
+            List<ArticleComment> articleComments = [],
+            List<ArticleReaction> articleReactions = [],
+            PublicStatus publicStatus = PublicStatus.PUBLIC,
+            Boolean isDeleted = false,
+            OffsetDateTime createdAt = null,
+            OffsetDateTime updatedAt = null) {
+        this.id = id
+        this.user = user
+        this.title = title
+        this.body = body
+        this.articleMedias = articleMedias
+        this.articleComments = articleComments
+        this.articleReactions = articleReactions
+        this.publicStatus = publicStatus
+        this.isDeleted = isDeleted
+        this.createdAt = createdAt
+        this.updatedAt = updatedAt
+    }
+
+    Article(User user,
+            String title,
+            String body,
+            List<ArticleMedia> articleMedias,
+            List<ArticleComment> articleComments = [],
+            List<ArticleReaction> articleReactions = [],
+            PublicStatus publicStatus = PublicStatus.PUBLIC,
+            Boolean isDeleted = false,
+            OffsetDateTime createdAt = null,
+            OffsetDateTime updatedAt = null) {
+        this.user = user
+        this.title = title
+        this.body = body
+        this.articleMedias = articleMedias
+        this.articleComments = articleComments
+        this.articleReactions = articleReactions
+        this.publicStatus = publicStatus
+        this.isDeleted = isDeleted
+        this.createdAt = createdAt
+        this.updatedAt = updatedAt
+    }
+
+    Article() {}
 
     @Override
     public String toString() {
         return "Article{" +
                 "id=" + id +
-                ", user=" + user +
+                ", userId=" + user?.id +
                 ", title='" + title + '\'' +
                 ", body='" + body + '\'' +
+                ", articleMedias=" + articleMedias +
+                ", articleComments=" + articleComments +
+                ", articleReactions=" + articleReactions +
                 ", publicStatus=" + publicStatus +
                 ", isDeleted=" + isDeleted +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
-                '}';
+                '}'
     }
 
     boolean equals(o) {
@@ -74,6 +150,9 @@ class Article implements Serializable {
 
         Article article = (Article) o
 
+        if (articleComments != article.articleComments) return false
+        if (articleMedias != article.articleMedias) return false
+        if (articleReactions != article.articleReactions) return false
         if (body != article.body) return false
         if (createdAt != article.createdAt) return false
         if (id != article.id) return false
@@ -92,6 +171,9 @@ class Article implements Serializable {
         result = 31 * result + (user != null ? user.hashCode() : 0)
         result = 31 * result + (title != null ? title.hashCode() : 0)
         result = 31 * result + (body != null ? body.hashCode() : 0)
+        result = 31 * result + (articleMedias != null ? articleMedias.hashCode() : 0)
+        result = 31 * result + (articleComments != null ? articleComments.hashCode() : 0)
+        result = 31 * result + (articleReactions != null ? articleReactions.hashCode() : 0)
         result = 31 * result + (publicStatus != null ? publicStatus.hashCode() : 0)
         result = 31 * result + (isDeleted != null ? isDeleted.hashCode() : 0)
         result = 31 * result + (createdAt != null ? createdAt.hashCode() : 0)

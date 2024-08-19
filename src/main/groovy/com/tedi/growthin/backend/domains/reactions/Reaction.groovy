@@ -11,24 +11,36 @@ import jakarta.persistence.Temporal
 import jakarta.persistence.TemporalType
 import org.hibernate.annotations.CreationTimestamp
 
+import java.time.OffsetDateTime
+
 @Entity
 @Table(name = "reactions")
-class Reaction implements Serializable{
+class Reaction implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "reactions_id_seq_gen")
     @SequenceGenerator(name = "reactions_id_seq_gen", sequenceName = "public.reactions_id_seq", allocationSize = 1)
     Long id
 
-    @Column(nullable = false)
+    @Column(name = '"alias"',nullable = false)
     String alias = ''
 
     @Column(nullable = false)
-    byte [] image
+    byte[] image
 
     @Column
     @CreationTimestamp
     @Temporal(value = TemporalType.TIMESTAMP)
-    Date createdAt
+    OffsetDateTime createdAt
 
+
+    @Override
+    public String toString() {
+        return "Reaction{" +
+                "id=" + id +
+                ", alias='" + alias + '\'' +
+                ", image=" + image ? "[...]" : null +
+                ", createdAt=" + createdAt +
+                '}';
+    }
 }

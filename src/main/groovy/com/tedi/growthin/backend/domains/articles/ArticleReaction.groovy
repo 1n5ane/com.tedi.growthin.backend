@@ -1,7 +1,8 @@
-package com.tedi.growthin.backend.domains.users
+package com.tedi.growthin.backend.domains.articles
 
-import com.tedi.growthin.backend.domains.articles.Article
+
 import com.tedi.growthin.backend.domains.reactions.Reaction
+import com.tedi.growthin.backend.domains.users.User
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -17,14 +18,17 @@ import jakarta.persistence.TemporalType
 import jakarta.persistence.UniqueConstraint
 import org.hibernate.annotations.CreationTimestamp
 
+import java.time.OffsetDateTime
+
 @Entity
 @Table(name = "user_articles_reactions", uniqueConstraints = [
         @UniqueConstraint(
                 name = "user_id_reaction_id_articles_id_uniqueness",
                 columnNames = ["id_articles", "id_users"]
         )
-]) // user can have one reaction per article
-class UserArticleReaction implements Serializable {
+])
+// user can have one reaction per article
+class ArticleReaction implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_articles_reactions_id_seq_gen")
@@ -32,32 +36,51 @@ class UserArticleReaction implements Serializable {
     Long id
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_articles", nullable = false)
+    @JoinColumn(name = "id_articles", updatable = false, nullable = false)
     Article article
 
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_users", nullable = false)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "id_users", updatable = false, nullable = false)
     User user
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_reactions", nullable = false)
     Reaction reaction
 
-    @Column
+    @Column(updatable = false)
     @CreationTimestamp
     @Temporal(value = TemporalType.TIMESTAMP)
-    Date createdAt
+    OffsetDateTime createdAt
 
     @Column
     @Temporal(value = TemporalType.TIMESTAMP)
-    Date updatedAt
+    OffsetDateTime updatedAt
+
+    ArticleReaction() {}
+
+    ArticleReaction(Long id, Article article, User user, Reaction reaction, OffsetDateTime createdAt = null, OffsetDateTime updatedAt = null) {
+        this.id = id
+        this.article = article
+        this.user = user
+        this.reaction = reaction
+        this.createdAt = createdAt
+        this.updatedAt = updatedAt
+    }
+
+    ArticleReaction(Article article, User user, Reaction reaction, OffsetDateTime createdAt = null, OffsetDateTime updatedAt = null) {
+        this.article = article
+        this.user = user
+        this.reaction = reaction
+        this.createdAt = createdAt
+        this.updatedAt = updatedAt
+    }
 
     @Override
     public String toString() {
         return "UserArticleReaction{" +
                 "id=" + id +
-                ", article=" + article +
+                ", articleId=" + article?.id +
                 ", user=" + user +
                 ", reaction=" + reaction +
                 ", createdAt=" + createdAt +
@@ -69,9 +92,9 @@ class UserArticleReaction implements Serializable {
         if (this.is(o)) return true
         if (o == null || getClass() != o.class) return false
 
-        UserArticleReaction that = (UserArticleReaction) o
+        ArticleReaction that = (ArticleReaction) o
 
-        if (article != that.article) return false
+        if (article?.id != that.article?.id) return false
         if (createdAt != that.createdAt) return false
         if (id != that.id) return false
         if (reaction != that.reaction) return false

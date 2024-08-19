@@ -7,6 +7,7 @@ import com.tedi.growthin.backend.dtos.media.MediaDto
 import com.tedi.growthin.backend.dtos.media.MediaTypeDto
 import com.tedi.growthin.backend.repositories.media.MediaRepository
 import com.tedi.growthin.backend.repositories.media.MediaTypeRepository
+import com.tedi.growthin.backend.repositories.users.UserRepository
 import com.tedi.growthin.backend.utils.exception.validation.media.MediaException
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
@@ -23,14 +24,14 @@ class MediaService {
 
     @Transactional(rollbackFor = Exception.class)
     Media createMedia(MediaDto mediaDto) throws Exception {
-        if(mediaDto.mediaTypeDto!=null && (mediaDto.mediaTypeDto.name==null || mediaDto.mediaTypeDto.name.isEmpty())){
+        if (mediaDto.mediaTypeDto != null && (mediaDto.mediaTypeDto.name == null || mediaDto.mediaTypeDto.name.isEmpty())) {
             throw new MediaException("Media type can't be empty")
         }
 
         //search media type to fetch id
         def mediaType = mediaTypeRepository.findByNameContaining(mediaDto.mediaTypeDto.name)
 
-        if(mediaType == null){
+        if (mediaType == null) {
             throw new MediaException("Media type '${mediaDto.mediaTypeDto.name}' is unknown")
         }
 
@@ -40,6 +41,41 @@ class MediaService {
         Media media = mediaFromMediaDto(mediaDto)
         media = mediaRepository.save(media)
         return media
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    List<Media> createMedias(List<MediaDto> mediaDtoList) throws Exception {
+        if (mediaDtoList == null || mediaDtoList.isEmpty()) {
+            throw new MediaException("Media list can't be empty")
+        }
+
+        List<Media> medias = []
+
+        //findAll media types
+        List<MediaType> allMediaTypes = mediaTypeRepository.findAll().toList()
+
+
+        mediaDtoList.each { mediaDto ->
+            if (mediaDto.mediaTypeDto == null || mediaDto.mediaTypeDto.name == null || mediaDto.mediaTypeDto.name.isEmpty()) {
+                throw new MediaException("Media type can't be empty")
+            }
+            //check if mediaType provided is valid
+            MediaType mediaType = allMediaTypes.find { mt ->
+                mt.name == mediaDto.mediaTypeDto.name
+            }
+
+            if (mediaType == null) {
+                throw new MediaException("Media type '${mediaDto.mediaTypeDto.name}' is unknown")
+            }
+
+            mediaDto.mediaTypeDto.id = mediaType.id
+            mediaDto.mediaTypeDto.name = mediaType.name
+
+            medias.add(mediaFromMediaDto(mediaDto))
+        }
+
+        medias = mediaRepository.saveAll(medias).toList()
+        return medias
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -55,10 +91,10 @@ class MediaService {
         if (markDeleted == null)
             markDeleted = false
 
-        if (media.isDeleted != markDeleted){
+        if (media.isDeleted != markDeleted) {
             media.isDeleted = markDeleted
             media = mediaRepository.save(media)
-        }else {
+        } else {
             media = null
         }
 
@@ -69,8 +105,8 @@ class MediaService {
         return mediaRepository.findById(id)
     }
 
-    List<Media> findAllByIds(List<Long> ids){
-        if(ids.isEmpty())
+    List<Media> findAllByIds(List<Long> ids) {
+        if (ids.isEmpty())
             return []
 
         return mediaRepository.findAllByIdIn(ids)

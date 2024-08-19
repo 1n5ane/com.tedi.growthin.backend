@@ -21,7 +21,7 @@ interface ChatRoomMessageRepository extends PagingAndSortingRepository<ChatRoomM
                              @Param("messageIds") List<Long> messageIds)
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("update ChatRoomMessage crm set crm.isRead = :isRead where crm.chatRoom.id = :chatId and crm.sender.idddddddddddddddddddddddddd = :senderId and crm.isRead != :isRead")
+    @Query("update ChatRoomMessage crm set crm.isRead = :isRead where crm.chatRoom.id = :chatId and crm.sender.id = :senderId and crm.isRead != :isRead")
     void setIsReadToAllChatRoomMessagesBySender(@Param("chatId") Long chatId, @Param("senderId") Long senderId, @Param("isRead") Boolean isRead)
 
     @Query("select crm from ChatRoomMessage crm where crm.chatRoom.id = :chatId")

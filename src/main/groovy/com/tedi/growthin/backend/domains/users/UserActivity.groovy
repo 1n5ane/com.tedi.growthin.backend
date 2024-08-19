@@ -2,6 +2,8 @@ package com.tedi.growthin.backend.domains.users
 
 import com.tedi.growthin.backend.domains.articles.Article
 import com.tedi.growthin.backend.domains.articles.ArticleComment
+import com.tedi.growthin.backend.domains.articles.ArticleCommentReaction
+import com.tedi.growthin.backend.domains.articles.ArticleReaction
 import com.tedi.growthin.backend.domains.jobs.JobAd
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -69,14 +71,14 @@ class UserActivity implements Serializable{
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = 'id_user_comments_reactions')
-    UserArticleCommentReaction commentReaction
+    ArticleCommentReaction commentReaction
 
     @Column(name = "is_article_reaction", nullable = false)
     Boolean isArticleReaction = false
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = 'id_user_articles_reactions')
-    UserArticleReaction articleReaction
+    ArticleReaction articleReaction
 
     @Column
     @CreationTimestamp
