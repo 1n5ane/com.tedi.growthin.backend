@@ -5,6 +5,7 @@ import com.tedi.growthin.backend.domains.articles.ArticleComment
 import com.tedi.growthin.backend.domains.articles.ArticleCommentReaction
 import com.tedi.growthin.backend.domains.articles.ArticleMedia
 import com.tedi.growthin.backend.domains.articles.ArticleReaction
+import com.tedi.growthin.backend.domains.enums.PublicStatus
 import com.tedi.growthin.backend.domains.users.User
 import com.tedi.growthin.backend.dtos.articles.ArticleCommentDto
 import com.tedi.growthin.backend.dtos.articles.ArticleCommentReactionDto
@@ -29,10 +30,15 @@ import com.tedi.growthin.backend.utils.exception.validation.articles.ArticleMedi
 import com.tedi.growthin.backend.utils.exception.validation.articles.ArticleReactionException
 import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 import java.time.OffsetDateTime
+import java.util.function.Consumer
 
 @Service
 @Slf4j
@@ -66,7 +72,7 @@ class UserArticleService {
     UserConnectionRepository userConnectionRepository
 
     @Transactional(rollbackFor = Exception.class)
-    Article createNewArticle(ArticleDto articleDto) throws Exception {
+    ArticleDto createNewArticle(ArticleDto articleDto) throws Exception {
         if (articleDto.userDto == null)
             throw new ArticleException("User owner of article can't be empty")
 
@@ -95,7 +101,7 @@ class UserArticleService {
             articleMedias = this.createArticleMedias(article.id, articleDto.articleMedias)
         }
         article.articleMedias = articleMedias
-        return article
+        return articleDtoFromArticle(article)
     }
 
     //create or update
@@ -177,10 +183,88 @@ class UserArticleService {
         return true
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    ArticleDto updateArticle(ArticleDto articleDto) throws Exception {
+        Optional<Article> optionalArticle = articleRepository.findById((Long) articleDto.id)
+        if (optionalArticle.isEmpty()) {
+            throw new ArticleException("Article with id '${articleDto.id}' was not found")
+        }
+
+        def updated = false
+        def toBeUpdatedArticle = optionalArticle.get()
+
+        if (articleDto.title != null) {
+            updated = updateField(toBeUpdatedArticle::setTitle, toBeUpdatedArticle.title, articleDto.title, updated)
+            if (updated && toBeUpdatedArticle.title.isEmpty()) {
+                toBeUpdatedArticle.title = null
+            }
+        }
+        //check body
+        if (articleDto.body != null)
+            updated = updateField(toBeUpdatedArticle::setBody, toBeUpdatedArticle.body, articleDto.body, updated)
+        //check publicstatus
+        if (articleDto.publicStatus != null)
+            updated = updateField(toBeUpdatedArticle::setPublicStatus, toBeUpdatedArticle.publicStatus, articleDto.publicStatus, updated)
+
+        //check media
+//        if (articleDto.articleMedias != null) {
+//            //TODO: update media (add or remove or change order)
+//            if(articleDto.articleMedias.isEmpty()){
+//                //if empty list provided
+//                //remove everything from article
+//            }
+//        }
+
+        def updatedArticleDto = null
+        if (updated) {
+            toBeUpdatedArticle.updatedAt = OffsetDateTime.now()
+            toBeUpdatedArticle = articleRepository.save(toBeUpdatedArticle)
+            updatedArticleDto = articleDtoFromArticle(toBeUpdatedArticle)
+        } else {
+            log.trace("Article with id '${toBeUpdatedArticle.id}' was not updated no changes made")
+        }
+        return updatedArticleDto
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    //only update comment body (no delete -> there is endpoint for deleting)
+    ArticleCommentDto updateArticleComment(ArticleCommentDto articleCommentDto) throws Exception {
+        //check comment exists
+        Optional<ArticleComment> optionalArticleComment = articleCommentRepository.findById((Long) articleCommentDto.id)
+        if (optionalArticleComment.isEmpty())
+            throw new ArticleCommentException("Comment with id ${articleCommentDto.id} was not found")
+
+        def toBeUpdatedArticleComment = optionalArticleComment.get()
+        def updated = false
+
+        if (toBeUpdatedArticleComment.body != articleCommentDto.comment) {
+            toBeUpdatedArticleComment.body = articleCommentDto.comment
+            updated = true
+        }
+
+        def updatedCommentDto = null
+        if (updated) {
+            toBeUpdatedArticleComment.updatedAt = OffsetDateTime.now()
+            toBeUpdatedArticleComment = articleCommentRepository.save(toBeUpdatedArticleComment)
+            updatedCommentDto = articleCommentDtoFromArticleComment(toBeUpdatedArticleComment)
+        } else {
+            log.trace("Comment with id '${toBeUpdatedArticleComment.id}' was not updated no changes made")
+        }
+
+        return updatedCommentDto
+    }
+
+    private <T> boolean updateField(Consumer<T> setter, T currentValue, T newValue, boolean updated) {
+        if (newValue != null && !newValue.equals(currentValue)) {
+            setter.accept(newValue)
+            updated = true
+        }
+        return updated
+    }
 
     @Transactional(rollbackFor = Exception.class)
     Boolean deleteArticleCommentReaction(Long articleCommentReactionId) throws Exception {
-        if(articleCommentReactionId == null){
+        if (articleCommentReactionId == null) {
             throw new ArticleCommentReactionException("Article comment reaction id can't be empty")
         }
 
@@ -333,6 +417,72 @@ class UserArticleService {
         return optionalArticle.isEmpty() ? null : articleDtoFromArticle(optionalArticle.get())
     }
 
+    Page<Article> listAllArticlesOfConnectedNetworkAndIsDeleted(Long userId,
+                                                                Integer page,
+                                                                Integer pageSize,
+                                                                String sortBy,
+                                                                String order,
+                                                                Boolean isDeleted = false) throws Exception {
+        Sort.Direction direction = Sort.Direction.DESC
+        if (order == "asc")
+            direction = Sort.Direction.ASC
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy))
+
+        //get connected network of userId
+        def connectedUserIds = userConnectionRepository.findAllConnectedUserIdsByUserId(userId)
+
+        Page<Article> pageArticle = articleRepository.findAllByCurrentUserIdAndConnectedUserIdsAndIsDeleted(userId, connectedUserIds, isDeleted, pageable)
+        return pageArticle
+    }
+
+    Page<Article> listAllArticlesByUserIdAndIsDeletedAndPublicStatusIn(Long userId,
+                                                                       List<PublicStatus> publicStatusList,
+                                                                       Integer page,
+                                                                       Integer pageSize,
+                                                                       String sortBy,
+                                                                       String order,
+                                                                       Boolean isDeleted = false) throws Exception {
+        Sort.Direction direction = Sort.Direction.DESC
+        if (order == "asc")
+            direction = Sort.Direction.ASC
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy))
+
+        def publicStatusNamesList = []
+        publicStatusList.each { ps ->
+            publicStatusNamesList.add(ps.name())
+        }
+        Page<Article> pageArticle = articleRepository.findAllByUserIdAndIsDeletedAndPublicStatusIn(userId, isDeleted, publicStatusNamesList, pageable)
+        return pageArticle
+    }
+
+    Page<Article> listAllArticlesByUserIdAndIsDeleted(Long userId,
+                                                      Integer page,
+                                                      Integer pageSize,
+                                                      String sortBy,
+                                                      String order,
+                                                      Boolean isDeleted = false) throws Exception {
+        Sort.Direction direction = Sort.Direction.DESC
+        if (order == "asc")
+            direction = Sort.Direction.ASC
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy))
+        Page<Article> pageArticle = articleRepository.findAllByUserIdAndIsDeleted(userId, isDeleted, pageable)
+        return pageArticle
+    }
+
+    Page<ArticleComment> listAllArticleCommentsByArticleIdAndIsDeleted(Long articleId,
+                                                                       Integer page,
+                                                                       Integer pageSize,
+                                                                       String sortBy,
+                                                                       String order,
+                                                                       Boolean isDeleted = false) throws Exception {
+        Sort.Direction direction = Sort.Direction.DESC
+        if (order == "asc")
+            direction = Sort.Direction.ASC
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy))
+        Page<ArticleComment> pageArticleComment = articleCommentRepository.findAllByArticleIdAndIsDeleted(articleId, isDeleted, pageable)
+        return pageArticleComment
+    }
+
     ArticleCommentDto findArticleComment(Long articleId, Long commentId) throws Exception {
         if (articleId == null) {
             throw new ArticleCommentException("Article id can't be empty")
@@ -376,17 +526,24 @@ class UserArticleService {
         //get all user entities ids contained in article
         userIds.add(articleDto.userDto.id)
         articleDto.articleComments?.each { articleCommentDto ->
-            userIds.add(articleCommentDto.userDto.id)
-            //also get userIds from reactions
-            articleCommentDto.commentReactions?.each { articleCommentReactionDto ->
-                userIds.add(articleCommentReactionDto.userDto.id)
-            }
+            userIds += getUserIdsContainedInArticleCommentDto(articleCommentDto)
         }
 
         articleDto.articleReactions?.each { articleReactionDto ->
-            userIds.add(articleReactionDto.userDto.id)
+            userIds.add((Long) articleReactionDto.userDto.id)
         }
 
+        return userIds
+    }
+
+    static List<Long> getUserIdsContainedInArticleCommentDto(ArticleCommentDto articleCommentDto) throws Exception {
+        def userIds = []
+        //get all user entities ids contained in article comment
+        userIds.add(articleCommentDto.userDto.id)
+        //also get userIds from comment reactions
+        articleCommentDto.commentReactions?.each { articleCommentReactionDto ->
+            userIds.add(articleCommentReactionDto.userDto.id)
+        }
         return userIds
     }
 

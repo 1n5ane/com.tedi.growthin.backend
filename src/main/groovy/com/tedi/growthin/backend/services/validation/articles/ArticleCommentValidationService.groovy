@@ -17,7 +17,7 @@ class ArticleCommentValidationService implements ValidationService {
         articleCommentDto = articleCommentDto as ArticleCommentDto
 
         if(articleCommentDto.userDto == null || articleCommentDto.userDto.id == null){
-            throw new ArticleCommentException("User id not provided for creating comment")
+            throw new ArticleCommentException("User id not provided for comment")
         }
 
         if(articleCommentDto.articleId == null)

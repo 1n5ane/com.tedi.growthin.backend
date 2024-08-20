@@ -1,9 +1,13 @@
 package com.tedi.growthin.backend.services
 
+import com.tedi.growthin.backend.domains.articles.Article
+import com.tedi.growthin.backend.domains.articles.ArticleComment
 import com.tedi.growthin.backend.domains.enums.PublicStatus
 import com.tedi.growthin.backend.dtos.articles.ArticleCommentDto
+import com.tedi.growthin.backend.dtos.articles.ArticleCommentListDto
 import com.tedi.growthin.backend.dtos.articles.ArticleCommentReactionDto
 import com.tedi.growthin.backend.dtos.articles.ArticleDto
+import com.tedi.growthin.backend.dtos.articles.ArticleListDto
 import com.tedi.growthin.backend.dtos.articles.ArticleReactionDto
 import com.tedi.growthin.backend.dtos.connections.UserConnectionDto
 import com.tedi.growthin.backend.dtos.users.UserDto
@@ -18,8 +22,10 @@ import com.tedi.growthin.backend.utils.exception.validation.articles.ArticleComm
 import com.tedi.growthin.backend.utils.exception.validation.articles.ArticleException
 import com.tedi.growthin.backend.utils.exception.validation.articles.ArticleMediaException
 import com.tedi.growthin.backend.utils.exception.validation.articles.ArticleReactionException
+import com.tedi.growthin.backend.utils.exception.validation.paging.PagingArgumentException
 import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.Page
 import org.springframework.security.core.Authentication
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
@@ -44,7 +50,7 @@ class UserArticleIntegrationService {
     ArticleDto createNewArticle(ArticleDto articleDto, Authentication authentication) throws Exception {
         def userJwtToken = (Jwt) authentication.getCredentials()
         Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
-        String userIdentifier = "[userId = '${currentLoggedInUserId}', username = ${JwtService.extractUsername(userJwtToken)}]"
+//        String userIdentifier = "[userId = '${currentLoggedInUserId}', username = ${JwtService.extractUsername(userJwtToken)}]"
 
         articleDto.userDto = new UserDto()
         articleDto.userDto.id = currentLoggedInUserId
@@ -69,8 +75,101 @@ class UserArticleIntegrationService {
         articleDto.articleComments = []
         articleDto.articleReactions = []
 
-        def article = articleService.createNewArticle(articleDto)
-        return UserArticleService.articleDtoFromArticle(article)
+        def createdArticleDto = articleService.createNewArticle(articleDto)
+        return createdArticleDto
+    }
+
+    ArticleDto updateArticle(ArticleDto articleDto, Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        articleDto.userDto = new UserDto()
+        articleDto.userDto.id = currentLoggedInUserId
+
+
+        //find article and check if author is currentLoggedInUser
+        def toBeUpdatedArticleDto = articleService.findArticle((Long) articleDto.id)
+        if (toBeUpdatedArticleDto == null) {
+            throw new ArticleException("Article with id '${articleDto.id}' was not found")
+        }
+
+        if (toBeUpdatedArticleDto.userDto.id != currentLoggedInUserId) {
+            throw new ForbiddenException("You are not the author of the article. Can't update article.")
+        }
+
+        //currentLoggedInUser is author of article (ok sofar)
+        //No delete can be done from here -> there is endpoint for that
+        articleDto.isDeleted = null
+        articleDto.articleReactions = [] // can't update that
+        articleDto.articleComments = [] // can't update that either
+
+        //null fields won't be updated and will be left as is
+        //to remove for example title -> provide empty string
+        //to remove articleMedias -> provide empty list (null means no update)
+
+        //validate update
+        validationServiceMap["articleUpdateValidationService"].validate(articleDto)
+
+        //TODO: updating media of article not implemented (add/remove/change order)
+        //when implement remove the following line
+        articleDto.articleMedias = null
+
+        def updatedArticleDto = articleService.updateArticle(articleDto)
+        //hide private fields of not connected users (with currentLoggedInUser)
+        if (updatedArticleDto != null) {
+            //if indeed updated
+            updatedArticleDto = this.hidePrivateUserFieldsOfNotConnectedUsers(currentLoggedInUserId, updatedArticleDto)
+        }
+        return updatedArticleDto
+    }
+
+    ArticleCommentDto updateArticleComment(ArticleCommentDto articleCommentDto, Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        articleCommentDto.userDto = new UserDto()
+        articleCommentDto.userDto.id = currentLoggedInUserId
+        articleCommentDto.commentReactions = []
+
+
+        try {
+            this.checkIfAuthorizedToAccessArticle(currentLoggedInUserId, (Long) articleCommentDto.articleId)
+        } catch (ForbiddenException forbiddenException) {
+            throw new ForbiddenException(forbiddenException.getMessage() + " No comment updates can be made")
+        } catch (ArticleException articleException) {
+            throw new ArticleCommentException(articleException.getMessage() + " No comment updates can be made")
+        }
+
+        //validate
+        validationServiceMap["articleCommentValidationService"].validate(articleCommentDto)
+
+        //check if currentLoggedInUser is author of particular comment
+        def fetchedArticleComment = articleService.findArticleComment(
+                (Long) articleCommentDto.articleId,
+                (Long) articleCommentDto.id
+        )
+
+        if (fetchedArticleComment == null) {
+            throw new ArticleCommentException("Comment with id '${articleCommentDto.id}' was not found")
+        }
+
+        //user not author of article -> can't update comment
+        if (fetchedArticleComment.userDto.id != currentLoggedInUserId) {
+            throw new ForbiddenException("This comment was not made by you. Comment can't be updated")
+        }
+
+        //if comment is deleted -> can't be update either
+        if (fetchedArticleComment.isDeleted) {
+            throw new ForbiddenException("This comment is deleted and can't be updated")
+        }
+
+        def updatedArticleComment = articleService.updateArticleComment(articleCommentDto)
+        if (updatedArticleComment != null) {
+            //hide user reaction private fields
+            updatedArticleComment = hidePrivateUserFieldsOfNotConnectedUsers(currentLoggedInUserId, updatedArticleComment)
+        }
+
+        return updatedArticleComment
     }
 
     ArticleCommentDto createNewArticleComment(ArticleCommentDto articleCommentDto, Authentication authentication) throws Exception {
@@ -85,31 +184,12 @@ class UserArticleIntegrationService {
 
         validationServiceMap["articleCommentValidationService"].validate(articleCommentDto)
 
-        //check article exists
-        ArticleDto articleDto = articleService.findArticle((Long) articleCommentDto.articleId)
-        if (articleDto == null) {
-            throw new ArticleCommentException("Article with id '${articleCommentDto.articleId}' was not found!")
-        }
-
-        //check if deleted
-        if (articleDto.isDeleted) {
-            throw new ForbiddenException("Article with id ${articleCommentDto.articleId} has been removed and can no further be commented!")
-
-        }
-        def userIds = UserArticleService.getUserIdsContainedInArticleDto(articleDto)
-        def connectedUserIds = userConnectionService.getConnectedUserIdsFromIdList(currentLoggedInUserId, userIds)
-        if (articleDto.userDto.id != currentLoggedInUserId && !connectedUserIds.contains(articleDto.userDto.id)) {
-            //if not connected and author not currentLoggedInUser
-            if (articleDto.publicStatus != PublicStatus.PUBLIC) {
-                //if article is not public -> user can't comment
-                throw new ForbiddenException("Article with id '${articleDto.id}' is not public and users are not connected. No comments can be made")
-            }
-        }
-
-        // also if article is hidden
-        //only author can comment it
-        if (articleDto.publicStatus == PublicStatus.HIDDEN && currentLoggedInUserId != articleDto.userDto.id) {
-            throw new ForbiddenException("Article with id '${articleDto.id}' is not public and no comments can be made")
+        try {
+            this.checkIfAuthorizedToAccessArticle(currentLoggedInUserId, (Long) articleCommentDto.articleId)
+        } catch (ForbiddenException forbiddenException) {
+            throw new ForbiddenException(forbiddenException.getMessage() + " No comments can be made")
+        } catch (ArticleException articleException) {
+            throw new ArticleCommentException(articleException.getMessage() + " No comments can be made")
         }
 
         def articleComment = articleService.createNewArticleComment(articleCommentDto)
@@ -216,7 +296,7 @@ class UserArticleIntegrationService {
         } catch (ForbiddenException forbiddenException) {
             throw new ForbiddenException(forbiddenException.getMessage() + " No changes to comment reactions can be made.")
         } catch (ArticleException articleException) {
-            throw new ArticleReactionException(articleException.getMessage() + " No changes to comment reactions can be made.")
+            throw new ArticleCommentException(articleException.getMessage() + " No changes to comment reactions can be made.")
         }
 
         //all good so far
@@ -264,52 +344,27 @@ class UserArticleIntegrationService {
         Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
         if (isDeleted == null)
             throw new ArticleCommentException("Is deleted flag is of type boolean and can't be null")
-        if (articleId == null) {
-            throw new ArticleCommentException("Article id can't be empty")
-        }
         if (commentId == null) {
             throw new ArticleCommentException("Comment id can't be empty")
         }
 
-        //fetch article
-        ArticleDto articleDto = articleService.findArticle(articleId)
-        if (articleDto == null) {
-            throw new ArticleException("Article with id '${articleId}' was not found")
-        }
-
-        if (articleDto.isDeleted) {
-            //if article is deleted by owner -> forbidden exception
-            throw new ForbiddenException("Article with id '${articleId}' is deleted and no further changes to comments can be applied")
-        }
-
-        def userIds = UserArticleService.getUserIdsContainedInArticleDto(articleDto)
-        def connectedUserIds = userConnectionService.getConnectedUserIdsFromIdList(currentLoggedInUserId, userIds)
-
-        if (articleDto.userDto.id != currentLoggedInUserId && !connectedUserIds.contains(articleDto.userDto.id)) {
-            //if not connected
-            if (articleDto.publicStatus != PublicStatus.PUBLIC) {
-                //if article is not public -> user can't update comments (they can't comment either)
-                throw new ForbiddenException("Article with id '${articleDto.id}' is not public and users are not connected. No changes to comments can be applied")
-            }
-        }
-
-        //if article is hidden and currentLoggedInUser not owner of article
-        if (articleDto.publicStatus == PublicStatus.HIDDEN && articleDto.userDto.id != currentLoggedInUserId) {
-            throw new ForbiddenException("Article with id '${articleId}' is not public and no changes to comments can be applied")
+        try {
+            this.checkIfAuthorizedToAccessArticle(currentLoggedInUserId, articleId)
+        } catch (ForbiddenException forbiddenException) {
+            throw new ForbiddenException(forbiddenException.getMessage() + " No changes to comments can be made")
+        } catch (ArticleException articleException) {
+            throw new ArticleCommentException(articleException.getMessage() + " No changes to comments can be made")
         }
 
         //fetch article comment
         ArticleCommentDto articleCommentDto = articleService.findArticleComment(articleId, commentId)
-
         if (articleCommentDto == null) {
             throw new ArticleCommentException("Comment with id '${commentId}' was not found for article with id '${articleId}'")
         }
-
         //check if currentLoggedInUser is owner of comment
         if (articleCommentDto.userDto.id != currentLoggedInUserId) {
             throw new ForbiddenException("Comment with id '${commentId}' was not created by you")
         }
-
         //all good so far -> set is deleted (if not already deleted)
         def success = true
         if (articleCommentDto.isDeleted != isDeleted)
@@ -318,7 +373,196 @@ class UserArticleIntegrationService {
         return success
     }
 
-    private void checkIfAuthorizedToAccessArticle(Long currentLoggedInUserId, Long articleId) throws Exception {
+
+    ArticleDto findUserArticle(Long articleId, Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        ArticleDto articleDto
+        try {
+            articleDto = this.checkIfAuthorizedToAccessArticle(currentLoggedInUserId, articleId)
+        } catch (ForbiddenException forbiddenException) {
+            throw new ForbiddenException(forbiddenException.getMessage() + " Article can't be viewed.")
+        } catch (ArticleException ignored) {
+            return null
+        }
+
+        articleDto = this.hidePrivateUserFieldsOfNotConnectedUsers(currentLoggedInUserId, articleDto)
+        return articleDto
+    }
+
+    ArticleListDto findAllArticles(Integer page,
+                                   Integer pageSize,
+                                   String sortBy,
+                                   String order,
+                                   Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+
+        //list all articles
+        //- articles with status CONNECTED_NETWORK (for users connected with currentLoggedInUser)
+        //- all PUBLIC articles
+        //- hidden articles of currentLoggedInUser
+        validationServiceMap["pagingArgumentsValidationService"].validate([
+                "page"    : page,
+                "pageSize": pageSize,
+                "order"   : order
+        ])
+
+        sortBy = sortBy.trim()
+        if (!["id", "createdAt", "updatedAt"].contains(sortBy))
+            throw new PagingArgumentException("SortBy can only be one of [id, createdAt, updatedAt]")
+
+        Page<Article> articlePage = articleService.listAllArticlesOfConnectedNetworkAndIsDeleted(
+                currentLoggedInUserId,
+                page,
+                pageSize,
+                sortBy,
+                order,
+                false)
+
+        ArticleListDto articleListDto = new ArticleListDto()
+        articleListDto.totalPages = articlePage.totalPages
+
+        if (articlePage.isEmpty()) {
+            return articleListDto
+        }
+
+        List<Article> articleList = articlePage.getContent()
+        def articleDtos = []
+        articleList.each { a ->
+            articleDtos.add(hidePrivateUserFieldsOfNotConnectedUsers(currentLoggedInUserId, UserArticleService.articleDtoFromArticle(a)))
+        }
+        articleListDto.articles = articleDtos
+        return articleListDto
+    }
+
+
+    ArticleListDto findAllUserArticles(Long userId,
+                                       Integer page,
+                                       Integer pageSize,
+                                       String sortBy,
+                                       String order,
+                                       Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        //check if userId exists
+        if (userService.getUserById(userId) == null) {
+            throw new ArticleException("User with id '${userId}' was not found")
+        }
+
+        //list all articles of user
+        //if user not connected with currentLoggedInUser
+        //list all PUBLIC articles (and not deleted)
+        //otherwise list all (not deleted) except HIDDEN
+        //only list hidden if currentLoggedInUserId == userId
+
+        validationServiceMap["pagingArgumentsValidationService"].validate([
+                "page"    : page,
+                "pageSize": pageSize,
+                "order"   : order
+        ])
+
+        sortBy = sortBy.trim()
+        if (!["id", "createdAt", "updatedAt"].contains(sortBy))
+            throw new PagingArgumentException("SortBy can only be one of [id, createdAt, updatedAt]")
+
+
+        Page<Article> articlePage
+
+        if (currentLoggedInUserId == userId) {
+            //if user lists all his own articles
+            //fetch PUBLIC + CONNECTED_NETWORK + HIDDEN (and not deleted)
+            articlePage = articleService.listAllArticlesByUserIdAndIsDeleted(userId, page, pageSize, sortBy, order, false)
+        } else {
+            //check if users are connected (currentLoggedInUser with userId)
+            def userConnection = new UserConnectionDto(null, currentLoggedInUserId, userId)
+            def isConnected = userConnectionService.checkUserConnectionExists(userConnection)
+            def publicStatusList
+            if (isConnected) {
+                //fetch PUBLIC + CONNECTED_NETWORK (and of course not deleted)
+                publicStatusList = [PublicStatus.PUBLIC, PublicStatus.CONNECTED_NETWORK]
+            } else {
+                //fetch PUBLIC (and again not deleted) as users are not connected
+                publicStatusList = [PublicStatus.PUBLIC]
+            }
+
+            articlePage = articleService.listAllArticlesByUserIdAndIsDeletedAndPublicStatusIn(
+                    userId,
+                    publicStatusList,
+                    page,
+                    pageSize,
+                    sortBy,
+                    order, false
+            )
+        }
+
+        ArticleListDto articleListDto = new ArticleListDto()
+        articleListDto.totalPages = articlePage.totalPages
+
+        if (articlePage.isEmpty()) {
+            return articleListDto
+        }
+
+        List<Article> articleList = articlePage.getContent()
+        def articleDtos = []
+        articleList.each { a ->
+            articleDtos.add(hidePrivateUserFieldsOfNotConnectedUsers(currentLoggedInUserId, UserArticleService.articleDtoFromArticle(a)))
+        }
+        articleListDto.articles = articleDtos
+        return articleListDto
+    }
+
+    ArticleCommentListDto findAllUserArticleComments(Long articleId,
+                                                     Integer page,
+                                                     Integer pageSize,
+                                                     String sortBy,
+                                                     String order,
+                                                     Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        validationServiceMap["pagingArgumentsValidationService"].validate([
+                "page"    : page,
+                "pageSize": pageSize,
+                "order"   : order
+        ])
+
+        sortBy = sortBy.trim()
+        if (!["id", "createdAt"].contains(sortBy))
+            throw new PagingArgumentException("SortBy can only be one of [id, createdAt]")
+
+        //check if user is authorized to access article
+        try {
+            this.checkIfAuthorizedToAccessArticle(currentLoggedInUserId, articleId)
+        } catch (ForbiddenException forbiddenException) {
+            throw new ForbiddenException(forbiddenException.getMessage() + " Comments can't be viewed.")
+        } catch (ArticleException articleException) {
+            throw new ArticleCommentException(articleException.getMessage() + " Comments can't be viewed.")
+        }
+
+        Page<ArticleComment> articlecCommentPage = articleService.listAllArticleCommentsByArticleIdAndIsDeleted(articleId, page, pageSize, sortBy, order, false)
+
+        ArticleCommentListDto articleCommentListDto = new ArticleCommentListDto()
+        articleCommentListDto.totalPages = articlecCommentPage.totalPages
+
+        if (articlecCommentPage.isEmpty()) {
+            return articleCommentListDto
+        }
+
+        List<ArticleComment> articleCommentList = articlecCommentPage.getContent()
+        def articleCommentsDtos = []
+        articleCommentList.each { ac ->
+            articleCommentsDtos.add(hidePrivateUserFieldsOfNotConnectedUsers(currentLoggedInUserId, UserArticleService.articleCommentDtoFromArticleComment(ac)))
+        }
+        articleCommentListDto.articleComments = articleCommentsDtos
+        return articleCommentListDto
+    }
+
+    //return artilcleDto entity or throw ForbiddenException
+    private ArticleDto checkIfAuthorizedToAccessArticle(Long currentLoggedInUserId, Long articleId) throws Exception {
         //check article exists
         def articleDto = articleService.findArticle((Long) articleId)
         if (articleDto == null) {
@@ -347,48 +591,42 @@ class UserArticleIntegrationService {
         if (articleDto.publicStatus == PublicStatus.HIDDEN && articleDto.userDto.id != currentLoggedInUserId) {
             throw new ForbiddenException("Article with id '${articleDto.id}' is not public.")
         }
+        return articleDto
     }
 
-    ArticleDto findUserArticle(Long articleId, Authentication authentication) throws Exception {
-        def userJwtToken = (Jwt) authentication.getCredentials()
-        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
-
-        if (articleId == null) {
-            throw new ArticleException("Article id can't be empty")
-        }
-
-        def articleDto = articleService.findArticle(articleId)
-        if (articleDto == null)
-            return null
-
-        if (articleDto.isDeleted) {
-            throw new ForbiddenException("Article with id '${articleId}' is deleted and can't be viewed")
-        }
-
-
-        def userIds = UserArticleService.getUserIdsContainedInArticleDto(articleDto)
-
+    private ArticleCommentDto hidePrivateUserFieldsOfNotConnectedUsers(Long currentLoggedInUserId, ArticleCommentDto articleCommentDto) throws Exception {
+        def userIds = UserArticleService.getUserIdsContainedInArticleCommentDto(articleCommentDto)
         def connectedUserIds = userConnectionService.getConnectedUserIdsFromIdList(currentLoggedInUserId, userIds)
 
-        //check if hidden and not currentLoggedInUser requestsArticle
-        if (articleDto.publicStatus == PublicStatus.HIDDEN && currentLoggedInUserId != articleDto.userDto.id) {
-            throw new ForbiddenException("Article with id '${articleId}' is hidden and can't be viewed")
-        }
+        //if not connected with comment author hide fields
+        def commentAuthorId = articleCommentDto.userDto.id
+        if (commentAuthorId != currentLoggedInUserId && !connectedUserIds.contains(commentAuthorId))
+            articleCommentDto.userDto = UserDto.hidePrivateFields(articleCommentDto.userDto)
 
-        if (articleDto.userDto.id != currentLoggedInUserId && !connectedUserIds.contains(articleDto.userDto.id)) {
-            //if not currentLoggedInUser owner of article and not connected with article owner
-
-            //check if can view article
-            if (articleDto.publicStatus != PublicStatus.PUBLIC) {
-                throw new ForbiddenException("Article is not public and are not connected with article owner")
+        //hide user private fields in comment reactions
+        articleCommentDto.commentReactions?.eachWithIndex { articleCommentReactionDto, i ->
+            def reactionUserId = articleCommentReactionDto.userDto.id
+            if (reactionUserId != currentLoggedInUserId && !connectedUserIds.contains(reactionUserId)) {
+                articleCommentDto.commentReactions[i].userDto = UserDto.hidePrivateFields(articleCommentReactionDto.userDto)
             }
-            articleDto.userDto = UserDto.hidePrivateFields(articleDto.userDto)
         }
+        return articleCommentDto
+    }
+
+    private ArticleDto hidePrivateUserFieldsOfNotConnectedUsers(Long currentLoggedInUserId, ArticleDto articleDto) throws Exception {
+        def userIds = UserArticleService.getUserIdsContainedInArticleDto(articleDto)
+        def connectedUserIds = userConnectionService.getConnectedUserIdsFromIdList(currentLoggedInUserId, userIds)
+
+        //if not connected with article author hide fields
+        if (articleDto.userDto.id != currentLoggedInUserId && !connectedUserIds.contains(articleDto.userDto.id))
+            articleDto.userDto = UserDto.hidePrivateFields(articleDto.userDto)
+
 
         //hide user entity fields for non connected users in comments
         articleDto.articleComments?.eachWithIndex { articleCommentDto, i ->
-            if (articleCommentDto.userDto.id != currentLoggedInUserId && !connectedUserIds.contains(articleCommentDto.userDto.id)) {
-                //if not currentLoggedInUser owner of comment and not connected with comment owner
+            def commentAuthorId = articleCommentDto.userDto.id
+            if (commentAuthorId != currentLoggedInUserId && !connectedUserIds.contains(commentAuthorId)) {
+                //if not currentLoggedInUser author of comment and not connected with comment author
                 articleDto.articleComments[i].userDto = UserDto.hidePrivateFields(articleCommentDto.userDto)
             }
 
@@ -398,6 +636,13 @@ class UserArticleIntegrationService {
                     articleDto.articleComments[i].commentReactions[j].userDto = UserDto.hidePrivateFields(articleCommentReactionDto.userDto)
                 }
             }
+        }
+
+        //hide user entity fields for non connected users in article reactions
+        articleDto.articleReactions?.eachWithIndex { articleReactionDto, i ->
+            def authorUserId = articleReactionDto.userDto.id
+            if (authorUserId != currentLoggedInUserId && !connectedUserIds.contains(authorUserId))
+                articleDto.articleReactions[i].userDto = UserDto.hidePrivateFields(articleReactionDto.userDto)
         }
 
         return articleDto

@@ -50,17 +50,15 @@ class Article implements Serializable {
 
     //one article has many comments
     @OneToMany(fetch = FetchType.EAGER, mappedBy = "article")
-    @OrderBy(value = "createdAt DESC")
+    @OrderBy(value = "createdAt ASC")
     @BatchSize(size = 10)
     @Where(clause = "is_deleted = false")
-    //only get 10 most recent (not deleted) comments -> not all the comments (there is an endpoint for that)
+    //only get 10 first (not deleted) comments -> not all the comments (there is an endpoint for that)
     List<ArticleComment> articleComments
 
     //one article has many reactions
     @OneToMany(fetch = FetchType.EAGER, mappedBy = "article")
     @OrderBy(value = "createdAt DESC")
-    @BatchSize(size = 20)
-    //only get 20 most recent article reactions -> not all the reaction (there is a controller for that)
     List<ArticleReaction> articleReactions
 
     @Enumerated(EnumType.STRING)

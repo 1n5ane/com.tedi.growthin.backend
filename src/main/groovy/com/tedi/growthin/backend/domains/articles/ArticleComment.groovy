@@ -35,8 +35,6 @@ class ArticleComment implements Serializable {
 
     @OneToMany(fetch = FetchType.EAGER, mappedBy = "comment")
     @OrderBy(value = "createdAt DESC")
-    @BatchSize(size = 20)
-    //only get 20 most recent comment reactions
     List<ArticleCommentReaction> commentReactions
 
     @ManyToOne(fetch = FetchType.EAGER)
