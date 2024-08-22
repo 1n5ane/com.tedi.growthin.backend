@@ -7,11 +7,15 @@ import com.tedi.growthin.backend.domains.users.User
 import com.tedi.growthin.backend.dtos.chats.ChatRoomDto
 import com.tedi.growthin.backend.dtos.chats.ChatRoomMessageDto
 import com.tedi.growthin.backend.dtos.chats.ChatRoomMessagesIsReadDto
+import com.tedi.growthin.backend.dtos.connections.UserConnectionRequestDto
+import com.tedi.growthin.backend.dtos.notifications.NotificationDto
+import com.tedi.growthin.backend.dtos.notifications.NotificationTypeDto
 import com.tedi.growthin.backend.repositories.chats.ChatRoomMessageRepository
 import com.tedi.growthin.backend.repositories.chats.ChatRoomRepository
 import com.tedi.growthin.backend.repositories.users.UserConnectionRepository
 import com.tedi.growthin.backend.repositories.users.UserRepository
 import com.tedi.growthin.backend.services.media.MediaService
+import com.tedi.growthin.backend.services.notifications.NotificationService
 import com.tedi.growthin.backend.services.users.UserService
 import com.tedi.growthin.backend.utils.exception.ForbiddenException
 import com.tedi.growthin.backend.utils.exception.validation.chats.ChatRoomException
@@ -46,6 +50,8 @@ class ChatRoomService {
     @Autowired
     ChatRoomRepository chatRoomRepository
 
+    @Autowired
+    NotificationService notificationService
 
     Boolean checkChatRoomExistsByRelatedUsers(Long relatedUserId1, Long relatedUserId2) throws Exception {
         if (relatedUserId1 == null)
@@ -61,11 +67,11 @@ class ChatRoomService {
     }
 
     Long countAllUnreadChatMessages(Long chatRoomId, Long senderId) throws Exception {
-        if(senderId == null){
+        if (senderId == null) {
             throw new ChatRoomMessageException("Sender id can't be empty")
         }
 
-        if(chatRoomId == null){
+        if (chatRoomId == null) {
             throw new ChatRoomException("Chat room id can't be empty")
         }
 
@@ -73,7 +79,7 @@ class ChatRoomService {
     }
 
     Long countAllChatRoomsWithUnreadMessages(Long userId) throws Exception {
-        if(userId == null){
+        if (userId == null) {
             throw new ChatRoomException("User id can't be empty")
         }
 
@@ -119,12 +125,11 @@ class ChatRoomService {
         ChatRoom chatRoom = new ChatRoom(null, optionalUser1.get(), optionalUser2.get())
 
         chatRoom = chatRoomRepository.save(chatRoom)
-
         return hidePrivateUserFieldsIfNotConnected(chatRoom)
     }
 
     @Transactional(rollbackFor = Exception.class)
-    ChatRoomMessageDto createChatRoomMessage(ChatRoomMessageDto chatRoomMessageDto) throws Exception {
+    ChatRoomMessageDto createChatRoomMessage(ChatRoomMessageDto chatRoomMessageDto, Boolean notify = true) throws Exception {
         //first check if users exist
         Optional<User> optionalUser1 = userRepository.findById((Long) chatRoomMessageDto.senderId)
         if (optionalUser1.isEmpty())
@@ -160,7 +165,27 @@ class ChatRoomService {
         )
 
         chatRoomMessage = chatRoomMessageRepository.save(chatRoomMessage)
-        return chatRoomMessageDtoFromChatRoomMessage(chatRoomMessage)
+        def createdChatRoomMessageDto = chatRoomMessageDtoFromChatRoomMessage(chatRoomMessage)
+
+
+        //TODO: NOT THE RIGHT PLACE FOR THE FOLLOWING ACTION
+        if (notify) {
+            //notify receiver of message for the new message
+            def notificationDto = new NotificationDto(
+                    null,
+                    UserService.userDtoFromUser(chatRoomMessage.sender),
+                    UserService.userDtoFromUser(optionalUser2.get()),//opitonalUser2 is receiver of message (so receiver of notification)
+                    new NotificationTypeDto(4, "CHAT_ROOM"),
+                    true,
+                    chatRoomDtoFromChatRoom(userChatRoom),
+                    false
+            )
+            notificationService.createNotification(notificationDto)
+            log.info("Successfully created notification for chat room message to user")
+        }
+
+
+        return createdChatRoomMessageDto
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -291,8 +316,8 @@ class ChatRoomService {
     static def chatRoomDtoFromChatRoom(ChatRoom chatRoom) {
         return new ChatRoomDto(
                 chatRoom.id,
-                UserService.userDtoFromUser(chatRoom.user1),
-                UserService.userDtoFromUser(chatRoom.user2),
+                chatRoom.user1 ? UserService.userDtoFromUser(chatRoom.user1) : null,
+                chatRoom.user2 ? UserService.userDtoFromUser(chatRoom.user2) : null,
                 chatRoom.createdAt
         )
     }

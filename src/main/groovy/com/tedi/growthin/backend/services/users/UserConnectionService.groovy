@@ -6,12 +6,16 @@ import com.tedi.growthin.backend.domains.users.UserConnection
 import com.tedi.growthin.backend.domains.users.UserConnectionRequest
 import com.tedi.growthin.backend.dtos.connections.UserConnectionDto
 import com.tedi.growthin.backend.dtos.connections.UserConnectionRequestDto
+import com.tedi.growthin.backend.dtos.notifications.NotificationDto
+import com.tedi.growthin.backend.dtos.notifications.NotificationTypeDto
 import com.tedi.growthin.backend.repositories.users.UserConnectionRepository
 import com.tedi.growthin.backend.repositories.users.UserConnectionRequestRepository
 import com.tedi.growthin.backend.repositories.users.UserRepository
+import com.tedi.growthin.backend.services.notifications.NotificationService
 import com.tedi.growthin.backend.utils.exception.ForbiddenException
 import com.tedi.growthin.backend.utils.exception.validation.connections.UserConnectionException
 import com.tedi.growthin.backend.utils.exception.validation.connections.UserConnectionRequestException
+import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
@@ -24,6 +28,7 @@ import java.time.OffsetDateTime
 
 
 @Service
+@Slf4j
 class UserConnectionService {
 
     @Autowired
@@ -34,6 +39,17 @@ class UserConnectionService {
 
     @Autowired
     UserRepository userRepository
+
+    //THIS BREAKS THE 'S' FROM SOLID PRINCIPLE (SINGLE RESPONSIBILITY)
+    //The notification logic shouldn't be here
+    //It should be called from the caller of this service
+    //THIS IS DONE FOR THE SAKE OF ASSIGNMENT (no time for setting up a robust notification system with decoupled architecture...)
+    //BECAUSE WE WANT NOTIFICATION TO BE SENT IN THE SAME TRANSACTION
+    // so in case of app restart or in case of failed notification -> also rollback action (comment, commentReaction, articleReaction) so that client can retry....
+    //If this was meant for production we would need a whole different architecture for event handling (Redis, activeMq etc...)
+    //So when the caller gets succes when publishing a message -> the message would be 100% delivered [at least once (if not exactly once )] <- that's a whole different story
+    @Autowired
+    NotificationService notificationService
 
     List<Long> getConnectedUserIdsByUserId(Long userId) throws Exception {
         return userConnectionRepository.findAllConnectedUserIdsByUserId(userId)
@@ -97,7 +113,7 @@ class UserConnectionService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    def createUserConnectionRequest(UserConnectionRequestDto userConnectionRequestDto) throws Exception {
+    def createUserConnectionRequest(UserConnectionRequestDto userConnectionRequestDto, notify = true) throws Exception {
         //first check if the user that currentLoggedInUser wants to connect with
         //already made a connection request
         //in that case currentLoggedInUser can make a new request to that ap[rticular user
@@ -164,19 +180,69 @@ class UserConnectionService {
 
         userConnectionRequest = userConnectionRequestRepository.save(userConnectionRequest)
 
+        //TODO: NOT THE RIGHT PLACE FOR THE FOLLOWING ACTION
+        //NOTIFY LOGIC...
+        if (notify) {
+            //notify connected user for the request
+            def notificationDto = new NotificationDto(
+                    null,
+                    UserService.userDtoFromUser(userConnectionRequest.user),
+                    UserService.userDtoFromUser(userConnectionRequest.connectedUser),
+                    new NotificationTypeDto(5, "CONNECTION_REQUEST"),
+                    true,
+                    new UserConnectionRequestDto(
+                            userConnectionRequest.id,
+                            userConnectionRequest.user.id,
+                            userConnectionRequest.connectedUser.id,
+                            userConnectionRequest.status,
+                            userConnectionRequest.createdAt,
+                            userConnectionRequest.updatedAt
+                    ),
+                    false
+            )
+            notificationService.createNotification(notificationDto)
+            log.info("Successfully created notification for user connection request")
+        }
+
         return userConnectionRequest
     }
 
     //nested transactional annotations will be in single transaction (spring's default behavior)
     @Transactional(rollbackFor = Exception.class)
-    UserConnection updateUserConnectionRequestAndCreateUserConnection(UserConnectionRequestDto userConnectionRequestDto) throws Exception {
+    UserConnection updateUserConnectionRequestAndCreateUserConnection(UserConnectionRequestDto userConnectionRequestDto, Boolean notify = true) throws Exception {
         def connectionRequest = this.updateUserConnectionRequest(userConnectionRequestDto)
         def userConnection = new UserConnectionDto(
                 null,//will be dynamicaly generated by sequence
                 connectionRequest.user.id,
                 userConnectionRequestDto.connectedUserId
         )
-        return this.createUserConnection(userConnection)
+        userConnection = this.createUserConnection(userConnection)
+
+        //TODO: NOT THE RIGHT PLACE FOR THE FOLLOWING ACTION
+        //Notify user that connection request was accepted
+        if (notify) {
+            //User that accepted request (connectedUser) notifies user (who made the request) that accepted it
+            def notificationDto = new NotificationDto(
+                    null,
+                    UserService.userDtoFromUser(connectionRequest.connectedUser),
+                    UserService.userDtoFromUser(connectionRequest.user),
+                    new NotificationTypeDto(5, "CONNECTION_REQUEST"),
+                    true,
+                    new UserConnectionRequestDto(
+                            connectionRequest.id,
+                            connectionRequest.user.id,
+                            connectionRequest.connectedUser.id,
+                            connectionRequest.status,
+                            connectionRequest.createdAt,
+                            connectionRequest.updatedAt
+                    ),
+                    false
+            )
+            notificationService.createNotification(notificationDto)
+            log.info("Successfully created notification for accepting user connection request")
+        }
+
+        return userConnection
     }
 
     //only update status of pending user connection request to ACCEPTED/DECLINED

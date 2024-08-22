@@ -56,4 +56,15 @@ class ReactionService {
         return new ReactionDto(reaction.id, reaction.alias, reaction.image, reaction.createdAt)
     }
 
+    //no paging as there won't be so many reactions
+    List<ReactionDto> findAll() throws Exception {
+        def reactionDtos = []
+        List<Reaction> fetchedReactions = reactionRepository.findAll().toList()
+
+        fetchedReactions.each { r ->
+            reactionDtos.add(reactionDtoFromReaction(r))
+        }
+
+        return reactionDtos
+    }
 }

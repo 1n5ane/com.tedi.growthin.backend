@@ -297,4 +297,24 @@ class UserService {
         return userDtoFromUser(updatedUser)
     }
 
+    static User userFromUserDto(UserDto userDto){
+        return new User(
+                (Long) userDto.id,
+                userDto.username,
+                userDto.email,
+                userDto.name,
+                userDto.surname,
+                userDto.phone,
+                userDto.area,
+                userDto.country,
+                userDto.authorities?.contains("ROLE_ADMIN"),
+                userDto.createdAt,
+                userDto.updatedAt,
+                userDto.isEmailPublic,
+                userDto.isPhonePublic,
+                userDto.isAreaPublic,
+                userDto.isCountryPublic
+        )
+    }
+
 }

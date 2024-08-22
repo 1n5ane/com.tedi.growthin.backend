@@ -199,7 +199,7 @@ class UserArticleController {
         }
 
         articleCommentDto.articleId = articleId.toLong()
-        x
+
         def jwtToken = (Jwt) authentication.getCredentials()
         String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
 

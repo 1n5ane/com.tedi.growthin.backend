@@ -30,7 +30,6 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.stereotype.Service
 
-//TODO: add endpoint for fetching all reactions -> frontend should map aliases
 @Service
 @Slf4j
 class UserArticleIntegrationService {
@@ -594,7 +593,7 @@ class UserArticleIntegrationService {
         return articleDto
     }
 
-    private ArticleCommentDto hidePrivateUserFieldsOfNotConnectedUsers(Long currentLoggedInUserId, ArticleCommentDto articleCommentDto) throws Exception {
+    ArticleCommentDto hidePrivateUserFieldsOfNotConnectedUsers(Long currentLoggedInUserId, ArticleCommentDto articleCommentDto) throws Exception {
         def userIds = UserArticleService.getUserIdsContainedInArticleCommentDto(articleCommentDto)
         def connectedUserIds = userConnectionService.getConnectedUserIdsFromIdList(currentLoggedInUserId, userIds)
 
@@ -613,7 +612,7 @@ class UserArticleIntegrationService {
         return articleCommentDto
     }
 
-    private ArticleDto hidePrivateUserFieldsOfNotConnectedUsers(Long currentLoggedInUserId, ArticleDto articleDto) throws Exception {
+    ArticleDto hidePrivateUserFieldsOfNotConnectedUsers(Long currentLoggedInUserId, ArticleDto articleDto) throws Exception {
         def userIds = UserArticleService.getUserIdsContainedInArticleDto(articleDto)
         def connectedUserIds = userConnectionService.getConnectedUserIdsFromIdList(currentLoggedInUserId, userIds)
 
@@ -646,6 +645,53 @@ class UserArticleIntegrationService {
         }
 
         return articleDto
+    }
+
+
+    List<ArticleCommentReactionDto> hidePrivateUserFieldsOfCommentReactionsOfNotConnectedUsers(Long currentLoggedInUserId, List<ArticleCommentReactionDto> articleCommentReactions) throws Exception {
+        if(articleCommentReactions.isEmpty())
+            return []
+
+        def userIds = []
+        def articleCommentReactionDtos = []
+        articleCommentReactions.each { articleCommentReactionDto ->
+            userIds.add((Long) articleCommentReactionDto.userDto.id)
+        }
+
+        def connectedUserIds = userConnectionService.getConnectedUserIdsFromIdList(currentLoggedInUserId, userIds)
+        articleCommentReactions.each {articleCommentReactionDto ->
+            if(articleCommentReactionDto.userDto.id != currentLoggedInUserId && !connectedUserIds.contains(articleCommentReactionDto.userDto.id)){
+                //if not connected (or user not the reaction owner)
+                //hide private fields
+                articleCommentReactionDto.userDto = UserDto.hidePrivateFields(articleCommentReactionDto.userDto)
+            }
+            articleCommentReactionDtos.add(articleCommentReactionDto)
+        }
+
+        return articleCommentReactionDtos
+    }
+
+    List<ArticleReactionDto> hidePrivateUserFieldsOfArticleReactionsOfNotConnectedUsers(Long currentLoggedInUserId, List<ArticleReactionDto> articleReactions) throws Exception {
+        if(articleReactions.isEmpty())
+            return []
+
+        def userIds = []
+        def articleReactionDtos = []
+        articleReactions.each { articleReactionDto ->
+            userIds.add((Long) articleReactionDto.userDto.id)
+        }
+
+        def connectedUserIds = userConnectionService.getConnectedUserIdsFromIdList(currentLoggedInUserId, userIds)
+        articleReactions.each {articleReactionDto ->
+            if(articleReactionDto.userDto.id != currentLoggedInUserId && !connectedUserIds.contains(articleReactionDto.userDto.id)){
+                //if not connected (or user not the reaction owner)
+                //hide private fields
+                articleReactionDto.userDto = UserDto.hidePrivateFields(articleReactionDto.userDto)
+            }
+            articleReactionDtos.add(articleReactionDto)
+        }
+
+        return articleReactionDtos
     }
 
 }

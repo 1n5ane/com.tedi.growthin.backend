@@ -301,4 +301,22 @@ class UserChatIntegrationService {
         return chatRoomService.countAllChatRoomsWithUnreadMessages(currentLoggedInUserId)
     }
 
+    ChatRoomDto hidePrivateUserFieldsOfNotConnectedUsers(Long currentLoggedInUserId, ChatRoomDto chatRoomDto) throws Exception {
+        def userIds = []
+        userIds.add((Long) chatRoomDto.relatedUser1.id)
+        userIds.add((Long) chatRoomDto.relatedUser2.id)
+
+        def connectedUserIds = userConnectionService.getConnectedUserIdsFromIdList(currentLoggedInUserId, userIds)
+
+        if(chatRoomDto.relatedUser1.id != currentLoggedInUserId && !connectedUserIds.contains(chatRoomDto.relatedUser1.id)){
+            chatRoomDto.relatedUser1 = UserDto.hidePrivateFields(chatRoomDto.relatedUser1)
+        }
+
+        if(chatRoomDto.relatedUser2.id != currentLoggedInUserId && !connectedUserIds.contains(chatRoomDto.relatedUser2.id)){
+            chatRoomDto.relatedUser2 = UserDto.hidePrivateFields(chatRoomDto.relatedUser2)
+        }
+
+        return chatRoomDto
+
+    }
 }

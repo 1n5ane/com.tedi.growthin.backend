@@ -12,6 +12,8 @@ import com.tedi.growthin.backend.dtos.articles.ArticleCommentReactionDto
 import com.tedi.growthin.backend.dtos.articles.ArticleDto
 import com.tedi.growthin.backend.dtos.articles.ArticleMediaDto
 import com.tedi.growthin.backend.dtos.articles.ArticleReactionDto
+import com.tedi.growthin.backend.dtos.notifications.NotificationDto
+import com.tedi.growthin.backend.dtos.notifications.NotificationTypeDto
 import com.tedi.growthin.backend.dtos.reactions.ReactionDto
 import com.tedi.growthin.backend.repositories.articles.ArticleCommentReactionRepository
 import com.tedi.growthin.backend.repositories.articles.ArticleCommentRepository
@@ -22,6 +24,7 @@ import com.tedi.growthin.backend.repositories.reactions.ReactionRepository
 import com.tedi.growthin.backend.repositories.users.UserConnectionRepository
 import com.tedi.growthin.backend.repositories.users.UserRepository
 import com.tedi.growthin.backend.services.media.MediaService
+import com.tedi.growthin.backend.services.notifications.NotificationService
 import com.tedi.growthin.backend.services.users.UserService
 import com.tedi.growthin.backend.utils.exception.validation.articles.ArticleCommentException
 import com.tedi.growthin.backend.utils.exception.validation.articles.ArticleCommentReactionException
@@ -71,6 +74,17 @@ class UserArticleService {
     @Autowired
     UserConnectionRepository userConnectionRepository
 
+    //THIS BREAKS THE 'S' FROM SOLID PRINCIPLE (SINGLE RESPONSIBILITY)
+    //The notification logic shouldn't be here
+    //It should be called from the caller of this service
+    //THIS IS DONE FOR THE SAKE OF ASSIGNMENT (no time for setting up a robust notification system with decoupled architecture...)
+    //BECAUSE WE WANT NOTIFICATION TO BE SENT IN THE SAME TRANSACTION
+    // so in case of app restart or in case of failed notification -> also rollback action (comment, commentReaction, articleReaction) so that client can retry....
+    //If this was meant for production we would need a whole different architecture for event handling (Redis, activeMq etc...)
+    //So when the caller gets succes when publishing a message -> the message would be 100% delivered [at least once (if not exactly once )] <- that's a whole different story
+    @Autowired
+    NotificationService notificationService
+
     @Transactional(rollbackFor = Exception.class)
     ArticleDto createNewArticle(ArticleDto articleDto) throws Exception {
         if (articleDto.userDto == null)
@@ -106,7 +120,7 @@ class UserArticleService {
 
     //create or update
     @Transactional(rollbackFor = Exception.class)
-    ArticleReactionDto createNewArticleReaction(ArticleReactionDto articleReactionDto) throws Exception {
+    ArticleReactionDto createNewArticleReaction(ArticleReactionDto articleReactionDto, Boolean notify = true) throws Exception {
         if (articleReactionDto.reactionDto == null || (articleReactionDto.reactionDto.id == null && (articleReactionDto.reactionDto.alias == null || articleReactionDto.reactionDto.alias.isEmpty()))) {
             throw new ArticleReactionException("No reaction provided by user with id '${articleReactionDto.userDto.id}' for reacting to article with id '${articleReactionDto.articleId}'")
         }
@@ -160,8 +174,8 @@ class UserArticleService {
                 newArticleReaction.reaction = reaction
                 newArticleReaction.updatedAt = OffsetDateTime.now()
                 newArticleReaction = articleReactionRepository.save(newArticleReaction)
-                updated = true
             }
+            updated = true
         }
 
         //check if reaction changed to log
@@ -171,7 +185,31 @@ class UserArticleService {
             log.trace("User with id '${articleReactionDto.userDto.id}' created new reaction for article with id '${articleReactionDto.articleId}'")
         }
 
-        return articleReactionDtoFromArticleReaction(newArticleReaction)
+        ArticleReactionDto createdArticleReactionDto = articleReactionDtoFromArticleReaction(newArticleReaction)
+
+        //TODO: NOT THE RIGHT PLACE FOR THE FOLLOWING ACTION
+        //NOTIFY LOGIC...
+        if (notify) {
+            //notify author of article
+            //fetch article
+            def a = articleRepository.findById((Long) createdArticleReactionDto.articleId).get()
+            //be careful not to notify same user as the action user (ex. self like, self comment etc...)
+            if (a.user.id != createdArticleReactionDto.userDto.id) {
+                def notificationDto = new NotificationDto(
+                        null,
+                        createdArticleReactionDto.userDto,
+                        UserService.userDtoFromUser(a.user),
+                        new NotificationTypeDto(1, "ARTICLE_REACTION"),
+                        true,
+                        createdArticleReactionDto
+                )
+                notificationService.createNotification(notificationDto)
+                log.info("Successfully created notification for article reaction")
+            }
+        }
+
+
+        return createdArticleReactionDto
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -274,7 +312,7 @@ class UserArticleService {
 
     //create or update
     @Transactional(rollbackFor = Exception.class)
-    ArticleCommentReactionDto createNewArticleCommentReaction(ArticleCommentReactionDto articleCommentReactionDto) throws Exception {
+    ArticleCommentReactionDto createNewArticleCommentReaction(ArticleCommentReactionDto articleCommentReactionDto, Boolean notify = true) throws Exception {
         if (articleCommentReactionDto.reactionDto == null || (articleCommentReactionDto.reactionDto.id == null &&
                 (articleCommentReactionDto.reactionDto.alias == null || articleCommentReactionDto.reactionDto.alias.isEmpty()))) {
             throw new ArticleCommentReactionException("No reaction provided by user with id '${articleCommentReactionDto.userDto.id}' for reacting to comment with id '${articleCommentReactionDto.commentId}'")
@@ -341,12 +379,34 @@ class UserArticleService {
             log.trace("User with id '${articleCommentReactionDto.userDto.id}' created new reaction for comment with id '${articleCommentReactionDto.commentId}'")
         }
 
-        return articleCommentReactionDtoFromArticleCommentReaction(newArticleCommentReaction)
+        ArticleCommentReactionDto createdArticleCommentReactionDto = articleCommentReactionDtoFromArticleCommentReaction(newArticleCommentReaction)
+
+        //TODO: NOT THE RIGHT PLACE FOR THE FOLLOWING ACTION
+        //NOTIFY LOGIC...
+        if (notify) {
+            //notify author of comment
+            //be careful not to notify same user as the action user (ex. self like, self comment etc...)
+            def ac = articleCommentRepository.findById(newArticleCommentReaction.comment.id).get()
+            if (createdArticleCommentReactionDto.userDto.id != ac.user.id) {
+                def notificationDto = new NotificationDto(
+                        null,
+                        createdArticleCommentReactionDto.userDto,
+                        UserService.userDtoFromUser(ac.user),//comment author
+                        new NotificationTypeDto(3, "ARTICLE_COMMENT_REACTION"),
+                        true,
+                        createdArticleCommentReactionDto
+                )
+                notificationService.createNotification(notificationDto)
+                log.info("Successfully created notification for comment reaction")
+            }
+        }
+
+        return createdArticleCommentReactionDto
 
     }
 
     @Transactional(rollbackFor = Exception.class)
-    ArticleCommentDto createNewArticleComment(ArticleCommentDto articleCommentDto) throws Exception {
+    ArticleCommentDto createNewArticleComment(ArticleCommentDto articleCommentDto, Boolean notify = true) throws Exception {
         // check article exists
         Optional<Article> optionalArticle = articleRepository.findById((Long) articleCommentDto.articleId)
         if (optionalArticle.isEmpty())
@@ -366,7 +426,28 @@ class UserArticleService {
         )
 
         articleComment = articleCommentRepository.save(articleComment)
-        return articleCommentDtoFromArticleComment(articleComment)
+        ArticleCommentDto createdArticleCommentDto = articleCommentDtoFromArticleComment(articleComment)
+
+        //TODO: NOT THE RIGHT PLACE FOR THE FOLLOWING ACTION
+        //NOTIFY LOGIC...
+        if (notify) {
+            //notify author of article
+            //be careful not to notify same user as the action user (ex. self like, self comment etc...)
+            if (createdArticleCommentDto.userDto.id != article.user.id) {
+                def notificationDto = new NotificationDto(
+                        null,
+                        createdArticleCommentDto.userDto,
+                        UserService.userDtoFromUser(article.user),
+                        new NotificationTypeDto(2, "ARTICLE_COMMENT"),
+                        true,
+                        createdArticleCommentDto
+                )
+                notificationService.createNotification(notificationDto)
+                log.info("Successfully created notification for new comment")
+            }
+        }
+
+        return createdArticleCommentDto
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -590,7 +671,7 @@ class UserArticleService {
     static ArticleCommentReactionDto articleCommentReactionDtoFromArticleCommentReaction(ArticleCommentReaction articleCommentReaction, Boolean hideUserPrivateFields = false) {
         return new ArticleCommentReactionDto(
                 articleCommentReaction.id,
-                !hideUserPrivateFields ? UserService.userDtoFromUser(articleCommentReaction.user) : UserService.userDtoFromUserWithHiddenPrivateFields(articleCommentReaction.user),
+                articleCommentReaction.user?(!hideUserPrivateFields ? UserService.userDtoFromUser(articleCommentReaction.user) : UserService.userDtoFromUserWithHiddenPrivateFields(articleCommentReaction.user)):null,
                 articleCommentReaction.comment?.id,
                 new ReactionDto(articleCommentReaction.reaction?.id, articleCommentReaction.reaction?.alias),
                 articleCommentReaction.createdAt,
@@ -602,7 +683,7 @@ class UserArticleService {
         return new ArticleReactionDto(
                 articleReaction.id,
                 articleReaction.article?.id,
-                UserService.userDtoFromUser(articleReaction.user),
+                articleReaction.user?UserService.userDtoFromUser(articleReaction.user):null,
                 new ReactionDto(articleReaction.reaction?.id, articleReaction.reaction?.alias),
                 articleReaction.createdAt,
                 articleReaction.updatedAt
@@ -617,7 +698,7 @@ class UserArticleService {
         return new ArticleCommentDto(
                 articleComment.id,
                 articleComment.article?.id,
-                !hideUserPrivateFields ? UserService.userDtoFromUser(articleComment.user) : UserService.userDtoFromUserWithHiddenPrivateFields(articleComment.user),
+                articleComment.user?(!hideUserPrivateFields ? UserService.userDtoFromUser(articleComment.user) : UserService.userDtoFromUserWithHiddenPrivateFields(articleComment.user)):null,
                 commentReactionDtoList,
                 articleComment.body,
                 articleComment.isDeleted,
@@ -657,4 +738,19 @@ class UserArticleService {
         )
     }
 
+//    static Article articleFromArticleDto(ArticleDto articleDto) {
+//        return new Article(
+//                (Long) articleDto.id,
+//                articleDto.userDto?UserService.userFromUserDto(articleDto.userDto):null,
+//                articleDto.title,
+//                articleDto.body,
+//                [],
+//                [],
+//                [],
+//                articleDto.publicStatus,
+//                articleDto.isDeleted,
+//                articleDto.createdAt,
+//                articleDto.updatedAt
+//        )
+//    }
 }
