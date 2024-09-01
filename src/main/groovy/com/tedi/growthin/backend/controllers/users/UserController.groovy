@@ -81,29 +81,19 @@ class UserController {
         return new ResponseEntity<>(response, HttpStatus.OK)
     }
 
-    @GetMapping(value = "/{id}", produces = "application/json;charset=UTF-8")
+    @GetMapping(value = "/{username}", produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @ResponseBody
-    def getUser(@PathVariable("id") String id, Authentication authentication) {
+    def getUser(@PathVariable("username") String username, Authentication authentication) {
         def response = ["success": true,
                         "user"   : null,
                         "error"  : ""]
-
-        Long userId
-        try {
-            userId = id.toLong()
-        } catch (NumberFormatException ignored) {
-            response["success"] = false
-            response["error"] = "Invalid user id '${id}'".toString()
-            return new ResponseEntity<>(response, HttpStatus.OK)
-        }
-
 
         def jwtToken = (Jwt) authentication.getCredentials()
         String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
 
         UserDto userDto = new UserDto()
-        userDto.id = userId
+        userDto.username = username
         try {
             def user = userIntegrationService.getUser(userDto, authentication)
             response["user"] = user
