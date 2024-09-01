@@ -99,16 +99,15 @@ class UserController {
             response["user"] = user
             if (!user) {
                 response["success"] = false
-                response["error"] = "User with id ${userId} was not found".toString()
-                //if user not found -> return 404
-                return new ResponseEntity<>(response, HttpStatus.NOT_FOUND)
+                response["error"] = "User with username '${username}' was not found".toString()
+                return new ResponseEntity<>(response, HttpStatus.OK)
             }
         } catch (ValidationException validationException) {
-            log.error("${userIdentifier} Failed to get user '${userId}': ${validationException.getMessage()}")
+            log.error("${userIdentifier} Failed to get user '${username}': ${validationException.getMessage()}")
             response["success"] = false
             response["error"] = validationException.getMessage()
         } catch (Exception exception) {
-            log.error("${userIdentifier} Failed to get user '${userId}': ${exception.getMessage()}")
+            log.error("${userIdentifier} Failed to get user '${username}': ${exception.getMessage()}")
             response["success"] = false
             response["error"] = "An error occured! Please try again later"
         }
