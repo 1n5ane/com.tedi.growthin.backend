@@ -17,6 +17,14 @@ class UserProfileValidationService implements ValidationService{
 
         userProfileDto = userProfileDto as UserProfileDto
 
+        if(userProfileDto.age!=null){
+            try{
+                userProfileDto.age = (userProfileDto.age as String).toLong()
+            }catch(NumberFormatException ignored){
+                throw new UserProfileException("Age is invalid")
+            }
+        }
+
         if(userProfileDto.age!=null && (userProfileDto.age <6 || userProfileDto.age>110))
             throw new UserProfileException("Age is invalid.")
 
