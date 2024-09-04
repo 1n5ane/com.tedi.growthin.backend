@@ -34,6 +34,18 @@ class UserConnectionIntegrationService {
     @Autowired
     UserService userService
 
+    Long countAllUserConnectionRequestsByStatus(String requestType, UserConnectionRequestStatus enumStatus, Authentication authentication){
+        if (!["incoming", "outgoing"].contains(requestType)) {
+            throw new UserConnectionRequestException("requestType can either be incoming or outgoing")
+        }
+
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        def count = userConnectionService.countAllUserConnectionRequestsByStatus(requestType, currentLoggedInUserId, enumStatus)
+        return count
+    }
+
 
     //User connection requests made TO or BY The user
     UserConnectionRequestListDto findAllUserConnectionRequestsByStatus(String requestType,
@@ -44,7 +56,7 @@ class UserConnectionIntegrationService {
                                                                        String order,
                                                                        Authentication authentication) throws Exception {
 
-        if(!["incoming","outgoing"].contains(requestType)){
+        if (!["incoming", "outgoing"].contains(requestType)) {
             throw new UserConnectionRequestException("requestType can either be incoming or outgoing")
         }
 
@@ -90,7 +102,7 @@ class UserConnectionIntegrationService {
 
         def isRequestTypeIncoming = requestType == "incoming"
 
-        if(status == UserConnectionRequestStatus.PENDING || status == UserConnectionRequestStatus.DECLINED) {
+        if (status == UserConnectionRequestStatus.PENDING || status == UserConnectionRequestStatus.DECLINED) {
             //hide private user fields
             userConnectionRequestList.each { ucr ->
                 def user
@@ -105,7 +117,7 @@ class UserConnectionIntegrationService {
                         "updatedAt": ucr.updatedAt
                 ])
             }
-        }else{
+        } else {
             //accepted requests -> show private user fields
             userConnectionRequestList.each { ucr ->
                 def user

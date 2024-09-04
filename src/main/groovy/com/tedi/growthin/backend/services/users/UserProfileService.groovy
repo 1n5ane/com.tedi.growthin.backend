@@ -171,7 +171,7 @@ class UserProfileService {
     static UserProfileDto userProfileDtoFromUserProfile(UserProfile userProfile) {
         return new UserProfileDto(
                 userProfile.profileId,
-                userProfile.user.username,
+                userProfile.user?.username,
                 userProfile.jobField,
                 userProfile.profilePicMedia ? MediaService.mediaDtoFromMedia(userProfile.profilePicMedia) : null,
                 userProfile.cvDocumentMedia ? MediaService.mediaDtoFromMedia(userProfile.cvDocumentMedia) : null,

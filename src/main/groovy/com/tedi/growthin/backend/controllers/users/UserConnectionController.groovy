@@ -92,6 +92,59 @@ class UserConnectionController {
         return new ResponseEntity<>(response, HttpStatus.OK)
     }
 
+    @GetMapping(value = "/requests/{requestType}/count", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def countAllUserConnectionRequestsByStatus(@PathVariable(name = "requestType") String requestType,
+                                               @RequestParam(name = "status", defaultValue = "PENDING") String status,
+                                               Authentication authentication) {
+        def response = [
+                "success": true,
+                "count"  : null,
+                "status" : null,
+                "error"  : ""
+        ]
+
+        if (!["incoming", "outgoing"].contains(requestType))
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND)
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        def enumStatus
+        try {
+            enumStatus = Enum.valueOf(UserConnectionRequestStatus.class, status)
+        } catch (IllegalArgumentException ignored) {
+            log.trace("${userIdentifier} Invalid status '${status}' on count all ${requestType} connection requests.")
+            response["success"] = false
+            response["error"] = "Invalid status ${status} .Status can be PENDING, ACCEPTED or DECLINED".toString()
+            //it's GSTRING
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+
+        try {
+            def count = userConnectionIntegrationService.countAllUserConnectionRequestsByStatus(
+                    requestType,
+                    enumStatus,
+                    authentication
+            )
+
+            response["status"] = enumStatus
+            response["count"] = count
+        } catch (ValidationException validationException) {
+            log.trace("${userIdentifier} ${validationException.getMessage()}")
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to count all user connections requests of type '${requestType}' for ${JwtService.extractAppUserId(jwtToken)}: ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+
+    }
 
     @GetMapping(value = "/requests/{requestType}", produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
@@ -104,8 +157,7 @@ class UserConnectionController {
                                               @RequestParam(name = "order", defaultValue = "desc") String order,
                                               @RequestParam(name = "status", defaultValue = "PENDING") String status,
                                               @PathVariable(name = "requestType") String requestType,
-                                              Authentication authentication
-    ) {
+                                              Authentication authentication) {
         def response
 
         if (!["incoming", "outgoing"].contains(requestType)) {
@@ -159,7 +211,7 @@ class UserConnectionController {
             response["hasNextPage"] = (page + 1) < userConnectionRequestListDto.totalPages
             response["totalPages"] = userConnectionRequestListDto.totalPages
             response["status"] = enumStatus
-            if(requestType == "incoming")
+            if (requestType == "incoming")
                 response["requestedBy"] = userConnectionRequestListDto.requests
             else
                 response["requestedTo"] = userConnectionRequestListDto.requests

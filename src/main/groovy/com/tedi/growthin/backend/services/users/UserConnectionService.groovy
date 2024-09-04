@@ -55,6 +55,21 @@ class UserConnectionService {
         return userConnectionRepository.findAllConnectedUserIdsByUserId(userId)
     }
 
+    Long countAllUserConnectionRequestsByStatus(String requestType, Long userId, UserConnectionRequestStatus status) {
+        if (!["incoming", "outgoing"].contains(requestType)) {
+            throw new UserConnectionRequestException("requestType can either be incoming or outgoing")
+        }
+
+        def count
+        if (requestType == "incoming") {
+            count = userConnectionRequestRepository.countAllToUserByUserIdAndStatus(userId, status.name())
+        } else {
+            count = userConnectionRequestRepository.countAllFromUserByUserIdAndStatus(userId, status.name())
+        }
+
+        return count
+    }
+
 
     Page<UserConnectionRequest> listAllUserConnectionRequestsByStatus(String requestType,
                                                                       Long userId,
