@@ -105,7 +105,7 @@ class UserConnectionController {
                 "error"  : ""
         ]
 
-        if (!["incoming", "outgoing"].contains(requestType))
+        if (!["incoming", "outgoing", "all"].contains(requestType))
             return new ResponseEntity<>(HttpStatus.NOT_FOUND)
 
         def jwtToken = (Jwt) authentication.getCredentials()
@@ -115,7 +115,7 @@ class UserConnectionController {
         try {
             enumStatus = Enum.valueOf(UserConnectionRequestStatus.class, status)
         } catch (IllegalArgumentException ignored) {
-            log.trace("${userIdentifier} Invalid status '${status}' on count all ${requestType} connection requests.")
+            log.trace("${userIdentifier} Invalid status '${status}' on count ${requestType} connection requests.")
             response["success"] = false
             response["error"] = "Invalid status ${status} .Status can be PENDING, ACCEPTED or DECLINED".toString()
             //it's GSTRING

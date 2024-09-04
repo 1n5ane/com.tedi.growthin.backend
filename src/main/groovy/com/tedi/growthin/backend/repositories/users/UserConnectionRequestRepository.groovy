@@ -23,6 +23,13 @@ interface UserConnectionRequestRepository extends PagingAndSortingRepository<Use
     Optional<UserConnectionRequest> findByUserIds(@Param("userId1") Long userId1, @Param("userId2") Long userId2)
 
 
+    @Query("SELECT count(1) FROM UserConnectionRequest ucr where (ucr.connectedUser.id = :userId or ucr.user.id = :userId) and CAST(ucr.status AS string) = :status")
+    //count all requests by status made TO/FROM userId
+    //EX. if status is accepted then count of all user connections is returned (either made by him or to him)
+    Long countAllByUserIdAndStatus(@Param("userId")Long userId, @Param("status") String status)
+
+
+
     @Query("SELECT count(1) FROM UserConnectionRequest ucr where ucr.connectedUser.id = :userId and CAST(ucr.status AS string) = :status")
     //count all requests by status made TO userId
     Long countAllToUserByUserIdAndStatus(@Param("userId")Long userId, @Param("status") String status)
@@ -30,6 +37,7 @@ interface UserConnectionRequestRepository extends PagingAndSortingRepository<Use
     //find all requests by status made TO userId
     @Query("SELECT ucr FROM UserConnectionRequest ucr where ucr.connectedUser.id = :userId and CAST(ucr.status AS string) = :status")
     Page<UserConnectionRequest> findAllToUserByUserIdAndStatus(@Param("userId")Long userId, @Param("status") String status, Pageable pageable)
+
 
     //count all requests by status made BY userId
     @Query("SELECT count(1) FROM UserConnectionRequest ucr where ucr.user.id = :userId and CAST(ucr.status AS string) = :status")

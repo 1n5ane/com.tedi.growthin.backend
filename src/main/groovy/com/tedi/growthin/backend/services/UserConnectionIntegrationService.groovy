@@ -35,8 +35,8 @@ class UserConnectionIntegrationService {
     UserService userService
 
     Long countAllUserConnectionRequestsByStatus(String requestType, UserConnectionRequestStatus enumStatus, Authentication authentication){
-        if (!["incoming", "outgoing"].contains(requestType)) {
-            throw new UserConnectionRequestException("requestType can either be incoming or outgoing")
+        if (!["incoming", "outgoing", 'all'].contains(requestType)) {
+            throw new UserConnectionRequestException("requestType can either be incoming, outgoing or all")
         }
 
         def userJwtToken = (Jwt) authentication.getCredentials()
