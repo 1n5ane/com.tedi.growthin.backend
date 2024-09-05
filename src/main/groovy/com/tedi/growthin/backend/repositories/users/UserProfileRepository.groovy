@@ -22,6 +22,6 @@ interface UserProfileRepository extends PagingAndSortingRepository<UserProfile, 
     @Query("select up from UserProfile up where up.user.username in :usernames")
     List<UserProfile> findAllByUsernamesIn(@Param("usernames") List<String> usernames)
 
-    @Query("select up from UserProfile up where up.user.username like %:username%")
+    @Query("select up from UserProfile up where up.user.username like %:username")
     Page<UserProfile> findAllByUsernameLike(@Param("username") String username, Pageable pageable)
 }
