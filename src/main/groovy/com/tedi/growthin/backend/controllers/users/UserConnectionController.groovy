@@ -67,10 +67,7 @@ class UserConnectionController {
         String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
 
         if (username == null) {
-            log.trace("${userIdentifier} No username parameter provided")
-            response["success"] = false
-            response["error"] = "No username parameter provided"
-            return new ResponseEntity<>(response, HttpStatus.OK)
+            username=''
         }
         //if users are connected or user requests his own connections return requested users' connections
         //else forbidden
