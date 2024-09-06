@@ -191,4 +191,9 @@ class NotificationService {
 
         return notificationDto
     }
+
+    @Transactional(rollbackFor = Exception.class)
+    void deleteConnectionNotification(Long connectionRequestId){
+        notificationRepository.deleteByConnectionRequestId(connectionRequestId)
+    }
 }

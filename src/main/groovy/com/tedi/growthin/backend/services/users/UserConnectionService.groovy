@@ -374,6 +374,7 @@ class UserConnectionService {
 
         if (optionalUserConnectionRequest.isPresent()) {
             def userConnectionRequest = optionalUserConnectionRequest.get()
+            notificationService.deleteConnectionNotification(userConnectionRequest.id)
             userConnectionRequestRepository.deleteById(userConnectionRequest.id)
         }
 
