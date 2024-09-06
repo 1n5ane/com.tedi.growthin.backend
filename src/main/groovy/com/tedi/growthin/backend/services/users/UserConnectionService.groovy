@@ -113,6 +113,24 @@ class UserConnectionService {
         return pageUserConnectionRequest
     }
 
+    Page<UserConnection> searchAllUserConnections(Long userId, String username, Integer page, Integer pageSize, String sortBy, String order) throws Exception {
+        //check if userId exists
+        def optionalUser = userRepository.findById(userId)
+
+        if (optionalUser.isEmpty()) {
+            throw new UserConnectionException("User reference id '${userId}' not found")
+        }
+
+        Sort.Direction direction = Sort.Direction.DESC
+        if (order == "asc")
+            direction = Sort.Direction.ASC
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy))
+
+        Page<UserConnection> pageUserConnection = userConnectionRepository.findAllByUserIdAndUsernameLike(userId, username, pageable)
+
+        return pageUserConnection
+    }
+
     Page<UserConnection> listAllUserConnections(Long userId, Integer page, Integer pageSize, String sortBy, String order) throws Exception {
         //check if userId exists
         def optionalUser = userRepository.findById(userId)

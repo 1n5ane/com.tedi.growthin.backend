@@ -36,6 +36,67 @@ class UserConnectionController {
     @Autowired
     UserConnectionIntegrationService userConnectionIntegrationService
 
+    @GetMapping(value = "/user/{userId}/search", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def searchAllUserConnectionsByUserIdAndUsername(@RequestParam(name = "page", defaultValue = "0") Integer page,
+                                                    @RequestParam(name = "size", defaultValue = "15") Integer pageSize,
+                                                    @RequestParam(name = "sortBy", defaultValue = "id") String sortBy,
+                                                    @RequestParam(name = "order", defaultValue = "desc") String order,
+                                                    @PathVariable("userId") String userId,
+                                                    @RequestParam(name = "username", required = false) String username,
+                                                    Authentication authentication) {
+        def response = [
+                "success"      : true,
+                "hasNextPage"  : false,
+                "user"         : null,
+                "connectedWith": [],
+                "totalPages"   : null,
+                "error"        : ""
+        ]
+
+        try {
+            userId.toLong()
+        } catch (NumberFormatException ignored) {
+            response["success"] = false
+            response["error"] = "Invalid user id '${userId}'.".toString()
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        if (username == null) {
+            log.trace("${userIdentifier} No username parameter provided")
+            response["success"] = false
+            response["error"] = "No username parameter provided"
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+        //if users are connected or user requests his own connections return requested users' connections
+        //else forbidden
+        try {
+            def userConnectionListDto = userConnectionIntegrationService.searchAllUserConnections(userId.toLong(), username, page, pageSize, sortBy, order, authentication)
+            response["hasNextPage"] = (page + 1) < userConnectionListDto.totalPages
+            response["totalPages"] = userConnectionListDto.totalPages
+            response["user"] = userConnectionListDto.user
+            response["connectedWith"] = userConnectionListDto.userConnections
+        } catch (ValidationException validationException) {
+            log.trace("${userIdentifier} ${validationException.getMessage()}")
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        } catch (ForbiddenException forbiddenException) {
+            log.trace("${userIdentifier} ${forbiddenException.getMessage()}")
+            response["success"] = false
+            response["error"] = forbiddenException.getMessage()
+            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN)
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to seaarch user connections for ${userId}: ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
 
     @GetMapping(value = "/user/{userId}", produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")

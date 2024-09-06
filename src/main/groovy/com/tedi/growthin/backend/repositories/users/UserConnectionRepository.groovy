@@ -24,9 +24,12 @@ interface UserConnectionRepository extends PagingAndSortingRepository<UserConnec
     @Query("select case when (uc.user.id = :userId) then uc.connectedUser.id else uc.user.id end from UserConnection uc where (uc.user.username in :userUsernameList or uc.connectedUser.username in :userUsernameList) and (uc.user.id = :userId or uc.connectedUser.id = :userId)")
     List<Long> findAllConnectedUserIdsByUserUsernameList(@Param("userId") Long userId, @Param("userUsernameList") List<String> userUsernameList)
 
+    @Query("SELECT uc FROM UserConnection uc where (uc.user.id = :userId  or uc.connectedUser.id = :userId) and (uc.user.username like :username% or uc.connectedUser.username like :username%)")
+    Page<UserConnection> findAllByUserIdAndUsernameLike(@Param("userId") Long userId, @Param("username") String username, Pageable pageable)
+
     //get all user connections (user id in user_ids or connected_user_ids)
     @Query("SELECT uc FROM UserConnection uc where uc.user.id = :userId or uc.connectedUser.id = :userId")
-    Page<UserConnection> findAllByUserId(@Param("userId")Long userId, Pageable pageable)
+    Page<UserConnection> findAllByUserId(@Param("userId") Long userId, Pageable pageable)
 
     @Query("SELECT uc FROM UserConnection uc where (uc.user.id = :userId1 and uc.connectedUser.id = :userId2) or (uc.user.id = :userId2 and uc.connectedUser.id = :userId1)")
     Optional<UserConnection> findByUserIds(@Param("userId1") Long userId1, @Param("userId2") Long userId2)

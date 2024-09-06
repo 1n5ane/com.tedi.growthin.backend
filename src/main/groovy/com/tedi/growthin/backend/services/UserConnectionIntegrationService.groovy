@@ -34,7 +34,7 @@ class UserConnectionIntegrationService {
     @Autowired
     UserService userService
 
-    Long countAllUserConnectionRequestsByStatus(String requestType, UserConnectionRequestStatus enumStatus, Authentication authentication){
+    Long countAllUserConnectionRequestsByStatus(String requestType, UserConnectionRequestStatus enumStatus, Authentication authentication) {
         if (!["incoming", "outgoing", 'all'].contains(requestType)) {
             throw new UserConnectionRequestException("requestType can either be incoming, outgoing or all")
         }
@@ -135,6 +135,58 @@ class UserConnectionIntegrationService {
         }
 
         return userConnectionRequestListDto
+    }
+
+    UserConnectionListDto searchAllUserConnections(Long userId, String username, Integer page, Integer pageSize, String sortBy, String order, Authentication authentication) throws Exception {
+
+        validationServiceMap["pagingArgumentsValidationService"].validate([
+                "page"    : page,
+                "pageSize": pageSize,
+                "order"   : order
+        ])
+
+        sortBy = sortBy.trim()
+        if (!["id", "createdAt"].contains(sortBy))
+            throw new PagingArgumentException("SortBy can only be one of [id, createdAt]")
+
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        //check if current logged in user request his own connections
+        if (currentLoggedInUserId != userId) {
+            //check if connected -> if not throw Forbidden exception (unconnected users can't view other users connections)
+            def userConnectionDto = new UserConnectionDto(null, null, userId)
+            if (!checkUserConnectionExists(userConnectionDto, authentication)) {
+                throw new ForbiddenException("You are not connected with user with id ${userId}")
+            }
+        }
+
+        //get connections for userId
+        def userConnectionsPage = userConnectionService.searchAllUserConnections(userId, username, page, pageSize, sortBy, order)
+
+        UserConnectionListDto userConnectionListDto = new UserConnectionListDto()
+
+        def userDto = userService.getUserById(userId)
+        userConnectionListDto.user = userDto
+
+        userConnectionListDto.totalPages = userConnectionsPage.totalPages
+
+        if (userConnectionsPage.isEmpty()) {
+            return userConnectionListDto
+        }
+
+        //fill user connections
+        List<UserConnection> userConnectionList = userConnectionsPage.getContent()
+
+        userConnectionList.each { uc ->
+            userConnectionListDto.userConnections.add([
+                    "userConnectionId": uc.id,
+                    "user"            : userId != uc.user.id ? UserService.userDtoFromUser(uc.user) : UserService.userDtoFromUser(uc.connectedUser),
+                    "createdAt"       : uc.createdAt
+            ])
+        }
+
+        return userConnectionListDto
     }
 
     UserConnectionListDto findAllUserConnections(Long userId, Integer page, Integer pageSize, String sortBy, String order, Authentication authentication) throws Exception {
