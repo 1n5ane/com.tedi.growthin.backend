@@ -390,6 +390,22 @@ class UserArticleIntegrationService {
         return articleDto
     }
 
+    Long countUserArticleComments(Long articleId, Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        Long count
+        try {
+            this.checkIfAuthorizedToAccessArticle(currentLoggedInUserId, articleId)
+        } catch (ForbiddenException forbiddenException) {
+            throw new ForbiddenException(forbiddenException.getMessage() + " Article can't be viewed.")
+        } catch (ArticleException ignored) {
+            return null
+        }
+
+        return articleService.countArticleComments(articleId)
+    }
+
     ArticleListDto findAllArticles(Integer page,
                                    Integer pageSize,
                                    String sortBy,

@@ -27,5 +27,4 @@ interface ArticleRepository extends PagingAndSortingRepository<Article, Long>, C
                                                                         @Param("connectedUserIds") List<Long> connectedUserIds,
                                                                         @Param("isDeleted") Boolean isDeleted,
                                                                         Pageable pageable)
-
 }

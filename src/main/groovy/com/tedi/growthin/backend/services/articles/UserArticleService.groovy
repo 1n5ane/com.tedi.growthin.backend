@@ -498,6 +498,14 @@ class UserArticleService {
         return optionalArticle.isEmpty() ? null : articleDtoFromArticle(optionalArticle.get())
     }
 
+    Long countArticleComments(Long articleId) throws Exception {
+        if (articleId == null) {
+            throw new ArticleException("Article id can't be empty")
+        }
+
+        return articleCommentRepository.countArticleComments(articleId)
+    }
+
     Page<Article> listAllArticlesOfConnectedNetworkAndIsDeleted(Long userId,
                                                                 Integer page,
                                                                 Integer pageSize,

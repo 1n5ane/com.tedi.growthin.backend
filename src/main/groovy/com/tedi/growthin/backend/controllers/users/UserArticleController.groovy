@@ -499,6 +499,48 @@ class UserArticleController {
         return new ResponseEntity<>(response, HttpStatus.OK)
     }
 
+    @GetMapping(value = "/{articleId}/comment/count", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def getTotalCommentsByArticleId(@PathVariable("articleId") String articleId, Authentication authentication) {
+        def response = [
+                "success": true,
+                "count"  : null,
+                "error"  : ""
+        ]
+
+        try {
+            articleId.toLong()
+        } catch (NumberFormatException ignored) {
+            response["success"] = false
+            response["error"] = "Invalid article id"
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        try {
+            def count = userArticleIntegrationService.countUserArticleComments(articleId.toLong(), authentication)
+            response["count"] = count
+        } catch (ForbiddenException forbiddenException) {
+            log.trace("${userIdentifier} Forbidden to access user article with id '${articleId}': ${forbiddenException.getMessage()}")
+            response["success"] = false
+            response["error"] = "Access is forbidden: ${forbiddenException.getMessage()}".toString()
+            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN)
+        } catch (ValidationException validationException) {
+            log.trace("${userIdentifier} Failed to count comments of user article with id '${articleId}': " + validationException.getMessage())
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to count comments of user article with id '${articleId}': ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
+
     @GetMapping(value = "/{articleId}", produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @ResponseBody
