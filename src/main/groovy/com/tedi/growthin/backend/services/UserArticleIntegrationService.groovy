@@ -530,6 +530,27 @@ class UserArticleIntegrationService {
         return articleListDto
     }
 
+    ArticleCommentDto findArticleComment(Long articleId, Long commentId, Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        //check if user is authorized to access article
+        try {
+            this.checkIfAuthorizedToAccessArticle(currentLoggedInUserId, articleId)
+        } catch (ForbiddenException forbiddenException) {
+            throw new ForbiddenException(forbiddenException.getMessage() + " Comment can't be viewed.")
+        } catch (ArticleException articleException) {
+            throw new ArticleCommentException(articleException.getMessage() + " Comment can't be viewed.")
+        }
+
+        ArticleCommentDto articleCommentDto = articleService.findArticleComment(articleId, commentId)
+        if(articleCommentDto == null){
+            throw new ArticleCommentException("Comment was not found")
+        }
+
+        return hidePrivateUserFieldsOfNotConnectedUsers(currentLoggedInUserId, articleCommentDto)
+    }
+
     ArticleCommentListDto findAllUserArticleComments(Long articleId,
                                                      Integer page,
                                                      Integer pageSize,
@@ -665,7 +686,7 @@ class UserArticleIntegrationService {
 
 
     List<ArticleCommentReactionDto> hidePrivateUserFieldsOfCommentReactionsOfNotConnectedUsers(Long currentLoggedInUserId, List<ArticleCommentReactionDto> articleCommentReactions) throws Exception {
-        if(articleCommentReactions.isEmpty())
+        if (articleCommentReactions.isEmpty())
             return []
 
         def userIds = []
@@ -675,8 +696,8 @@ class UserArticleIntegrationService {
         }
 
         def connectedUserIds = userConnectionService.getConnectedUserIdsFromIdList(currentLoggedInUserId, userIds)
-        articleCommentReactions.each {articleCommentReactionDto ->
-            if(articleCommentReactionDto.userDto.id != currentLoggedInUserId && !connectedUserIds.contains(articleCommentReactionDto.userDto.id)){
+        articleCommentReactions.each { articleCommentReactionDto ->
+            if (articleCommentReactionDto.userDto.id != currentLoggedInUserId && !connectedUserIds.contains(articleCommentReactionDto.userDto.id)) {
                 //if not connected (or user not the reaction owner)
                 //hide private fields
                 articleCommentReactionDto.userDto = UserDto.hidePrivateFields(articleCommentReactionDto.userDto)
@@ -688,7 +709,7 @@ class UserArticleIntegrationService {
     }
 
     List<ArticleReactionDto> hidePrivateUserFieldsOfArticleReactionsOfNotConnectedUsers(Long currentLoggedInUserId, List<ArticleReactionDto> articleReactions) throws Exception {
-        if(articleReactions.isEmpty())
+        if (articleReactions.isEmpty())
             return []
 
         def userIds = []
@@ -698,8 +719,8 @@ class UserArticleIntegrationService {
         }
 
         def connectedUserIds = userConnectionService.getConnectedUserIdsFromIdList(currentLoggedInUserId, userIds)
-        articleReactions.each {articleReactionDto ->
-            if(articleReactionDto.userDto.id != currentLoggedInUserId && !connectedUserIds.contains(articleReactionDto.userDto.id)){
+        articleReactions.each { articleReactionDto ->
+            if (articleReactionDto.userDto.id != currentLoggedInUserId && !connectedUserIds.contains(articleReactionDto.userDto.id)) {
                 //if not connected (or user not the reaction owner)
                 //hide private fields
                 articleReactionDto.userDto = UserDto.hidePrivateFields(articleReactionDto.userDto)

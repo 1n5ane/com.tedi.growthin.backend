@@ -587,6 +587,45 @@ class UserArticleController {
         return new ResponseEntity<>(response, HttpStatus.OK)
     }
 
+
+    @GetMapping(value = "/{articleId}/comment/{commentId}", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def findCommentById(@PathVariable("articleId") Long articleId,
+                        @PathVariable("commentId") Long commentId,
+                        Authentication authentication) {
+
+        def response = [
+                "success": true,
+                "comment": null,
+                "error"  : ""
+        ]
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        try {
+            def articleCommentDto = userArticleIntegrationService.findArticleComment(articleId, commentId, authentication)
+            response["comment"] = articleCommentDto
+        } catch (ForbiddenException forbiddenException) {
+            log.trace("${userIdentifier} Forbidden to access article with id '${articleId}': ${forbiddenException.getMessage()}")
+            response["success"] = false
+            response["error"] = "Access is forbidden: ${forbiddenException.getMessage()}".toString()
+            return new ResponseEntity<>(response, HttpStatus.FORBIDDEN)
+        } catch (ValidationException validationException) {
+            log.trace("${userIdentifier} Failed to get comment with id ${commentId} of article with id'${articleId}': " + validationException.getMessage())
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to get comment with id ${commentId} of article with id '${articleId}': ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+
+    }
+
     @GetMapping(value = "/{articleId}/comment", produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @ResponseBody
