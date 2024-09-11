@@ -44,8 +44,6 @@ class UserController {
     @GetMapping(value = ["/", ""], produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @ResponseBody
-    //list all users
-    //on connected users also include email + phone
     def listAllUsers(@RequestParam(name = "page", defaultValue = "0") Integer page,
                      @RequestParam(name = "size", defaultValue = "15") Integer pageSize,
                      @RequestParam(name = "sortBy", defaultValue = "id") String sortBy,
@@ -81,10 +79,12 @@ class UserController {
         return new ResponseEntity<>(response, HttpStatus.OK)
     }
 
-    @GetMapping(value = "/{username}", produces = "application/json;charset=UTF-8")
+    @GetMapping(value = "/details", produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @ResponseBody
-    def getUser(@PathVariable("username") String username, Authentication authentication) {
+    def getUser(@RequestParam(required = false, name = "username") String username,
+                @RequestParam(required = false, name = "id") String id,
+                Authentication authentication) {
         def response = ["success": true,
                         "user"   : null,
                         "error"  : ""]
@@ -93,7 +93,22 @@ class UserController {
         String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
 
         UserDto userDto = new UserDto()
-        userDto.username = username
+        if(username && !username.isEmpty()) {
+            userDto.username = username
+        }else if(id && !id.isEmpty()) {
+            try {
+                userDto.id = id.toLong()
+            }catch(NumberFormatException _){
+                response['success'] = false
+                response['error'] = 'Invalid id provided'
+                return new ResponseEntity<>(response, HttpStatus.OK)
+            }
+        }else{
+            response['success'] = false
+            response['error'] = 'Invalid id or username provided'
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
         try {
             def user = userIntegrationService.getUser(userDto, authentication)
             response["user"] = user
