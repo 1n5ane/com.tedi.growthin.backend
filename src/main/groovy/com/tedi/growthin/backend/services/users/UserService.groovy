@@ -216,7 +216,7 @@ class UserService {
         }
 
         if ((userDto.surname != null && !userDto.surname.isEmpty()) && (preUpdatedUser.lastName != userDto.surname)) {
-            preUpdatedUser.username = userDto.username
+            preUpdatedUser.lastName = userDto.surname
             updated = true
         }
 
