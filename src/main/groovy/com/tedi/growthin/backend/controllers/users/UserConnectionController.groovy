@@ -67,7 +67,7 @@ class UserConnectionController {
         String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
 
         if (username == null) {
-            username=''
+            username = ''
         }
         //if users are connected or user requests his own connections return requested users' connections
         //else forbidden
@@ -147,6 +147,41 @@ class UserConnectionController {
             response["error"] = "An error occured! Please try again later"
         }
 
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
+
+    @GetMapping(value = "/requests/{userId}/exists", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def checkIfPendingRequestForUser(@PathVariable(name = "userId") String userId,
+                                     Authentication authentication) {
+        def response = [
+                "success": true,
+                "exists" : false,
+                "error"  : ""
+        ]
+
+        try {
+            userId.toLong()
+        } catch (NumberFormatException ignored) {
+            response["success"] = false
+            response["error"] = "Invalid user id '${userId}'.".toString()
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+
+        try {
+            def exists = userConnectionIntegrationService.checkPendingUserConnectionRequestExists(userId.toLong(), authentication)
+            response['exists'] = exists
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to check if pending connection request exists: ${exception.getMessage()}")
+            response["success"] = false
+            response["exists"] = null
+            response["error"] = "An error occured! Please try again later"
+        }
         return new ResponseEntity<>(response, HttpStatus.OK)
     }
 

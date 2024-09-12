@@ -407,4 +407,8 @@ class UserConnectionService {
 
         return usersAlreadyConnected
     }
+
+    def checkPendingUserConnectionRequestExists(Long userId1, Long userId2) throws Exception {
+        return userConnectionRequestRepository.existsPendingRequest(userId1, userId2)
+    }
 }

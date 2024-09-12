@@ -26,25 +26,28 @@ interface UserConnectionRequestRepository extends PagingAndSortingRepository<Use
     @Query("SELECT count(1) FROM UserConnectionRequest ucr where (ucr.connectedUser.id = :userId or ucr.user.id = :userId) and CAST(ucr.status AS string) = :status")
     //count all requests by status made TO/FROM userId
     //EX. if status is accepted then count of all user connections is returned (either made by him or to him)
-    Long countAllByUserIdAndStatus(@Param("userId")Long userId, @Param("status") String status)
+    Long countAllByUserIdAndStatus(@Param("userId") Long userId, @Param("status") String status)
 
+
+    @Query("SELECT CASE WHEN COUNT(ucr) > 0 THEN TRUE ELSE FALSE END from UserConnectionRequest ucr where (ucr.connectedUser.id = :userId1 or ucr.user.id = :userId1) and (ucr.connectedUser.id = :userId2 or ucr.user.id = :userId2) and CAST(ucr.status as STRING)='PENDING'")
+    Boolean existsPendingRequest(@Param("userId1") Long userId1, @Param("userId2") Long userId2)
 
 
     @Query("SELECT count(1) FROM UserConnectionRequest ucr where ucr.connectedUser.id = :userId and CAST(ucr.status AS string) = :status")
     //count all requests by status made TO userId
-    Long countAllToUserByUserIdAndStatus(@Param("userId")Long userId, @Param("status") String status)
+    Long countAllToUserByUserIdAndStatus(@Param("userId") Long userId, @Param("status") String status)
 
     //find all requests by status made TO userId
     @Query("SELECT ucr FROM UserConnectionRequest ucr where ucr.connectedUser.id = :userId and CAST(ucr.status AS string) = :status")
-    Page<UserConnectionRequest> findAllToUserByUserIdAndStatus(@Param("userId")Long userId, @Param("status") String status, Pageable pageable)
+    Page<UserConnectionRequest> findAllToUserByUserIdAndStatus(@Param("userId") Long userId, @Param("status") String status, Pageable pageable)
 
 
     //count all requests by status made BY userId
     @Query("SELECT count(1) FROM UserConnectionRequest ucr where ucr.user.id = :userId and CAST(ucr.status AS string) = :status")
-    Long countAllFromUserByUserIdAndStatus(@Param("userId")Long userId, @Param("status") String status)
+    Long countAllFromUserByUserIdAndStatus(@Param("userId") Long userId, @Param("status") String status)
 
     //find all requests by status made BY userId
     @Query("SELECT ucr FROM UserConnectionRequest ucr where ucr.user.id = :userId and CAST(ucr.status AS string) = :status")
-    Page<UserConnectionRequest> findAllFromUserByUserIdAndStatus(@Param("userId")Long userId, @Param("status") String status, Pageable pageable)
+    Page<UserConnectionRequest> findAllFromUserByUserIdAndStatus(@Param("userId") Long userId, @Param("status") String status, Pageable pageable)
 
 }
