@@ -150,7 +150,7 @@ class UserConnectionController {
         return new ResponseEntity<>(response, HttpStatus.OK)
     }
 
-    @GetMapping(value = "/requests/{userId}/exists", produces = "application/json;charset=UTF-8")
+    @GetMapping(value = "/requests/user/{userId}/exists", produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @ResponseBody
     def checkIfPendingRequestForUser(@PathVariable(name = "userId") String userId,
