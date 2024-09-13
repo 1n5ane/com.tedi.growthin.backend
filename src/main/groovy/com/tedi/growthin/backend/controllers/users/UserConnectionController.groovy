@@ -185,6 +185,40 @@ class UserConnectionController {
         return new ResponseEntity<>(response, HttpStatus.OK)
     }
 
+    @GetMapping(value = "/requests/user/{userId}", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def getConnectionRequestByUserId(@PathVariable(name = "userId") String userId,
+                                     Authentication authentication) {
+        def response = [
+                "success"              : true,
+                "userConnectionRequest": null,
+                "error"                : ""
+        ]
+
+        try {
+            userId.toLong()
+        } catch (NumberFormatException ignored) {
+            response["success"] = false
+            response["error"] = "Invalid user id '${userId}'.".toString()
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+
+        try {
+            def userConnectionRequest = userConnectionIntegrationService.getUserConnectionRequestByUserId(userId.toLong(), authentication)
+            response['userConnectionRequest'] = userConnectionRequest
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to get connection request: ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
+
     @GetMapping(value = "/requests/{requestType}/count", produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @ResponseBody

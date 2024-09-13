@@ -408,6 +408,21 @@ class UserConnectionService {
         return usersAlreadyConnected
     }
 
+    def getUserConnectionRequestByUserIds(Long userId1, Long userId2) throws Exception {
+        Optional<UserConnectionRequest> optionalUserConnectionRequest = userConnectionRequestRepository.findByUserIds(userId1, userId2)
+        if(optionalUserConnectionRequest.isEmpty())
+            return null
+        UserConnectionRequest userConnectionRequest = optionalUserConnectionRequest.get()
+        return new UserConnectionRequestDto(
+                userConnectionRequest.id,
+                userConnectionRequest.user.id,
+                userConnectionRequest.connectedUser.id,
+                userConnectionRequest.status,
+                userConnectionRequest.createdAt,
+                userConnectionRequest.updatedAt
+        )
+    }
+
     def checkPendingUserConnectionRequestExists(Long userId1, Long userId2) throws Exception {
         return userConnectionRequestRepository.existsPendingRequest(userId1, userId2)
     }

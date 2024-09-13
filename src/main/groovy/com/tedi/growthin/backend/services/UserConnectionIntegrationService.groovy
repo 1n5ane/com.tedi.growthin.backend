@@ -325,6 +325,13 @@ class UserConnectionIntegrationService {
 
     }
 
+    def getUserConnectionRequestByUserId(Long userId, Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        return userConnectionService.getUserConnectionRequestByUserIds(currentLoggedInUserId, userId)
+    }
+
     Boolean checkUserConnectionExists(UserConnectionDto userConnectionDto, Authentication authentication) throws Exception {
         def userJwtToken = (Jwt) authentication.getCredentials()
         Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
