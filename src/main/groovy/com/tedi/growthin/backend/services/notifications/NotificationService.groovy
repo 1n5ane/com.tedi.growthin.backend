@@ -39,7 +39,7 @@ class NotificationService {
             direction = Sort.Direction.ASC
         Pageable pageable = PageRequest.of(page, pageSize, Sort.by(direction, sortBy))
 
-        Page<Notification> pageNotification = notificationRepository.findAllByRecipientIdAndNotChatRoomNotificationType(recipientId, pageable)
+        Page<Notification> pageNotification = notificationRepository.findAllByRecipientIdAdNotChatRoomNotificationType(recipientId, pageable)
         return pageNotification
     }
 
