@@ -28,7 +28,7 @@ interface NotificationRepository extends PagingAndSortingRepository<Notification
     @Query("select count(1) from Notification n where n.recipient.id = :recipientId and n.notificationType.name = 'CHAT_ROOM'")
     Long countAllUnreadChatRoomNotificationsByRecipientId(@Param("recipientId") Long recipientId)
 
-    @Query("select count(1) from Notification n where n.recipient.id = :recipientId and n.notificationType.name <> 'CHAT_ROOM'")
+    @Query("select count(1) from Notification n where n.recipient.id = :recipientId and n.notificationType.name <> 'CHAT_ROOM' and n.viewed = false")
     Long countAllUnreadByRecipientIdAndNotChatRoomNotificationType (@Param("recipientId") Long recipientId)
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
