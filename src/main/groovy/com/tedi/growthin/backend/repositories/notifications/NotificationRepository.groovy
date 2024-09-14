@@ -20,8 +20,16 @@ interface NotificationRepository extends PagingAndSortingRepository<Notification
     Page<Notification> findAllChatNotificationsByRecipientId(@Param("recipientId") Long recipientId, Pageable pageable)
 
     @Query("select n from Notification n where n.recipient.id = :recipientId and n.notificationType.name <> 'CHAT_ROOM'")
-    Page<Notification> findAllByRecipientIdAndNotChatRoomNotificationType(@Param("recipientId") Long recipientId, Pageable pageable)
+    Page<Notification> findAllByRecipientIdAdNotChatRoomNotificationType(@Param("recipientId") Long recipientId, Pageable pageable)
 
+    @Query("select count(1) from Notification n where n.recipient.id = :recipientId and n.viewed = false")
+    Long countAllUnreadByRecipientId(@Param("recipientId") Long recipientId)
+
+    @Query("select count(1) from Notification n where n.recipient.id = :recipientId and n.notificationType.name = 'CHAT_ROOM'")
+    Long countAllUnreadChatRoomNotificationsByRecipientId(@Param("recipientId") Long recipientId)
+
+    @Query("select count(1) from Notification n where n.recipient.id = :recipientId and n.notificationType.name <> 'CHAT_ROOM'")
+    Long countAllUnreadByRecipientIdAndNotChatRoomNotificationType (@Param("recipientId") Long recipientId)
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete Notification n where n.connectionRequest.id = :connectionRequestId")

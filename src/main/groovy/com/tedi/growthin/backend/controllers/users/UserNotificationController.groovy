@@ -83,8 +83,67 @@ class UserNotificationController {
         }
 
         return new ResponseEntity<>(response, HttpStatus.OK)
-
     }
+
+    @GetMapping(value = ["/count"], produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def countAllUnreadNotifications(@RequestParam(name="includeChatNotifications",defaultValue = "true") Boolean includeChatNotifications,Authentication authentication) {
+        def response = [
+                "success"      : true,
+                "count"        : null,
+                "error"        : ""
+        ]
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        try {
+            def count = userNotificationIntegrationService.countAllUnreadUserNotifications(includeChatNotifications, authentication)
+            response["count"] = count
+        } catch (ValidationException validationException) {
+            log.trace("${userIdentifier} ${validationException.getMessage()}")
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to count all user action notifications: ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
+
+    @GetMapping(value = ["/chat/count"], produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def countAllUnreadChatNotifications(@RequestParam(name="includeChatNotifications",defaultValue = "true") Boolean includeChatNotifications,Authentication authentication) {
+        def response = [
+                "success"      : true,
+                "count"        : null,
+                "error"        : ""
+        ]
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        try {
+            def count = userNotificationIntegrationService.countAllUnreadChatUserNotifications(authentication)
+            response["count"] = count
+        } catch (ValidationException validationException) {
+            log.trace("${userIdentifier} ${validationException.getMessage()}")
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to count all user chat notifications: ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
+
+
 
     @GetMapping(value = ["/chat"], produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
@@ -121,6 +180,5 @@ class UserNotificationController {
         }
 
         return new ResponseEntity<>(response, HttpStatus.OK)
-
     }
 }

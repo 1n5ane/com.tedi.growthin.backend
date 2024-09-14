@@ -96,6 +96,27 @@ class UserNotificationIntegrationService {
         return notificationListDto
     }
 
+    Long countAllUnreadUserNotifications(Boolean includeUnreadChatRoomNotification, Authentication authentication) throws Exception{
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        def count
+        if (includeUnreadChatRoomNotification) {
+            count = notificationService.countAllUnreadByRecipientId(currentLoggedInUserId)
+        } else {
+            count = notificationService.countAllUnreadByRecipientIdAndNotChatRoomNotificationType(currentLoggedInUserId)
+        }
+
+        return count
+    }
+
+    Long countAllUnreadChatUserNotifications(Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        return notificationService.countAllUnreadChatRoomNotificationsByRecipientId(currentLoggedInUserId)
+    }
+
     NotificationListDto findAllChatUserNotifications(Integer page,
                                                      Integer pageSize,
                                                      String sortBy,

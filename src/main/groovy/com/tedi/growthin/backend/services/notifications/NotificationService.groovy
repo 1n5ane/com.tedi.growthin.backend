@@ -53,6 +53,18 @@ class NotificationService {
         return pageNotification
     }
 
+    Long countAllUnreadByRecipientId(Long recipientId) throws Exception {
+        return notificationRepository.countAllUnreadByRecipientId(recipientId)
+    }
+
+    Long countAllUnreadChatRoomNotificationsByRecipientId(Long recipientId) throws Exception {
+        return notificationRepository.countAllUnreadChatRoomNotificationsByRecipientId(recipientId)
+    }
+
+    Long countAllUnreadByRecipientIdAndNotChatRoomNotificationType(Long recipientId) throws Exception {
+        return notificationRepository.countAllUnreadByRecipientIdAndNotChatRoomNotificationType(recipientId)
+    }
+
     Page<Notification> findAllChatNotificationsByRecipientId(Long recipientId, Integer page, Integer pageSize, String sortBy, String order) throws Exception {
         Sort.Direction direction = Sort.Direction.DESC
         if (order == "asc")
