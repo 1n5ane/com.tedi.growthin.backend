@@ -680,6 +680,7 @@ class UserArticleService {
         return new ArticleCommentReactionDto(
                 articleCommentReaction.id,
                 articleCommentReaction.user?(!hideUserPrivateFields ? UserService.userDtoFromUser(articleCommentReaction.user) : UserService.userDtoFromUserWithHiddenPrivateFields(articleCommentReaction.user)):null,
+                articleCommentReaction.comment?.article?.id,
                 articleCommentReaction.comment?.id,
                 new ReactionDto(articleCommentReaction.reaction?.id, articleCommentReaction.reaction?.alias),
                 articleCommentReaction.createdAt,
