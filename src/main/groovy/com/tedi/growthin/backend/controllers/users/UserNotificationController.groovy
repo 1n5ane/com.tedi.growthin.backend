@@ -11,6 +11,8 @@ import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.Authentication
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
@@ -88,11 +90,11 @@ class UserNotificationController {
     @GetMapping(value = ["/count"], produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @ResponseBody
-    def countAllUnreadNotifications(@RequestParam(name="includeChatNotifications",defaultValue = "true") Boolean includeChatNotifications,Authentication authentication) {
+    def countAllUnreadNotifications(@RequestParam(name = "includeChatNotifications", defaultValue = "true") Boolean includeChatNotifications, Authentication authentication) {
         def response = [
-                "success"      : true,
-                "count"        : null,
-                "error"        : ""
+                "success": true,
+                "count"  : null,
+                "error"  : ""
         ]
 
         def jwtToken = (Jwt) authentication.getCredentials()
@@ -117,11 +119,11 @@ class UserNotificationController {
     @GetMapping(value = ["/chat/count"], produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @ResponseBody
-    def countAllUnreadChatNotifications(@RequestParam(name="includeChatNotifications",defaultValue = "true") Boolean includeChatNotifications,Authentication authentication) {
+    def countAllUnreadChatNotifications(@RequestParam(name = "includeChatNotifications", defaultValue = "true") Boolean includeChatNotifications, Authentication authentication) {
         def response = [
-                "success"      : true,
-                "count"        : null,
-                "error"        : ""
+                "success": true,
+                "count"  : null,
+                "error"  : ""
         ]
 
         def jwtToken = (Jwt) authentication.getCredentials()
@@ -142,7 +144,6 @@ class UserNotificationController {
 
         return new ResponseEntity<>(response, HttpStatus.OK)
     }
-
 
 
     @GetMapping(value = ["/chat"], produces = "application/json;charset=UTF-8")
@@ -178,7 +179,68 @@ class UserNotificationController {
             response["success"] = false
             response["error"] = "An error occured! Please try again later"
         }
-
         return new ResponseEntity<>(response, HttpStatus.OK)
     }
+
+
+    @PostMapping(value = ["/read-all-unread"], produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    //if includeChatNotifications -> chat notifications will also be set to viewed=true
+    def readAllUnreadNotifications(@RequestParam(name = "includeChatNotifications", defaultValue = "false") Boolean includeChatNotifications,
+                                   Authentication authentication) {
+        def response = [
+                'success': true,
+                'error'  : ''
+        ]
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        try {
+            def success = userNotificationIntegrationService.readAllUnreadNotifications(includeChatNotifications, authentication)
+            response['success'] = success
+        } catch (ValidationException validationException) {
+            log.trace("${userIdentifier} ${validationException.getMessage()}")
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed set viewed to unread notifications: ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
+
+    @PostMapping(value = ["/read"], produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @ResponseBody
+    def readAllByIdList(@RequestBody def request, Authentication authentication) {
+        def response = [
+                'success': true,
+                'error'  : ''
+        ]
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        if(!request.ids || request.ids.isEmpty()){
+            response['success'] = false
+            response['error'] = 'No ids of type list provided in request body'
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        try {
+            def success = userNotificationIntegrationService.readAllUnreadByRecipientIdAndIdIn(request.ids as List, authentication)
+            response['success'] = success
+        } catch (ValidationException validationException) {
+            log.trace("${userIdentifier} ${validationException.getMessage()}")
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed set viewed to unread notifications by id list: ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
+
 }

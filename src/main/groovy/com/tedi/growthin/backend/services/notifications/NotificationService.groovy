@@ -57,6 +57,25 @@ class NotificationService {
         return notificationRepository.countAllUnreadByRecipientId(recipientId)
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    Boolean readAllUnreadByRecipientId(Long recipientId) throws Exception {
+        notificationRepository.readAllUnreadByRecipientId(recipientId)
+        return true
+    }
+
+
+    @Transactional(rollbackFor = Exception.class)
+    Boolean readAllUnreadByRecipientIdAndIdIn(Long recipientId, List idList) throws Exception {
+        notificationRepository.readAllUnreadByRecipientIdAndIdIn(recipientId, idList)
+        return true
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    Boolean readAllUnreadByRecipientIdAndNotChatRoomNotificationType(Long recipientId) throws Exception {
+        notificationRepository.readAllUnreadByRecipientIdAndNotChatRoomNotificationType(recipientId)
+        return true
+    }
+
     Long countAllUnreadChatRoomNotificationsByRecipientId(Long recipientId) throws Exception {
         return notificationRepository.countAllUnreadChatRoomNotificationsByRecipientId(recipientId)
     }

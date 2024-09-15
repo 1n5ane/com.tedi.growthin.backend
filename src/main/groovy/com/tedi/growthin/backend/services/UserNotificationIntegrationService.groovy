@@ -48,6 +48,28 @@ class UserNotificationIntegrationService {
     @Autowired
     UserChatIntegrationService userChatIntegrationService
 
+
+    Boolean readAllUnreadNotifications(Boolean includeUnreadChatRoomNotification, Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+
+        Boolean success
+        if (includeUnreadChatRoomNotification) {
+            success = notificationService.readAllUnreadByRecipientId(currentLoggedInUserId)
+        } else {
+            success = notificationService.readAllUnreadByRecipientIdAndNotChatRoomNotificationType(currentLoggedInUserId)
+        }
+
+        return success
+    }
+
+    Boolean readAllUnreadByRecipientIdAndIdIn(List idList, Authentication authentication) throws Exception {
+        def userJwtToken = (Jwt) authentication.getCredentials()
+        Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
+        return notificationService.readAllUnreadByRecipientIdAndIdIn(currentLoggedInUserId, idList)
+    }
+
+
     //list all notifications where recipient is current logged in user
     NotificationListDto findAllUserNotifications(Boolean findChatRoomNotification,
                                                  Integer page,
@@ -96,7 +118,7 @@ class UserNotificationIntegrationService {
         return notificationListDto
     }
 
-    Long countAllUnreadUserNotifications(Boolean includeUnreadChatRoomNotification, Authentication authentication) throws Exception{
+    Long countAllUnreadUserNotifications(Boolean includeUnreadChatRoomNotification, Authentication authentication) throws Exception {
         def userJwtToken = (Jwt) authentication.getCredentials()
         Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
 

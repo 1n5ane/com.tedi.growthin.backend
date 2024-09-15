@@ -22,6 +22,18 @@ interface NotificationRepository extends PagingAndSortingRepository<Notification
     @Query("select n from Notification n where n.recipient.id = :recipientId and n.notificationType.name <> 'CHAT_ROOM'")
     Page<Notification> findAllByRecipientIdAdNotChatRoomNotificationType(@Param("recipientId") Long recipientId, Pageable pageable)
 
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Notification n set n.viewed=true where n.viewed = false and n.recipient.id = :recipientId")
+    void readAllUnreadByRecipientId(@Param("recipientId") Long recipientId)
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Notification n set n.viewed=true where n.viewed = false and n.recipient.id = :recipientId and n.id in :idList")
+    void readAllUnreadByRecipientIdAndIdIn(@Param("recipientId") Long recipientId, @Param("idList") List idList )
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Notification n set n.viewed=true where n.viewed = false and n.notificationType.name <> 'CHAT_ROOM' and n.recipient.id = :recipientId")
+    void readAllUnreadByRecipientIdAndNotChatRoomNotificationType(@Param("recipientId") Long recipientId)
+
     @Query("select count(1) from Notification n where n.recipient.id = :recipientId and n.viewed = false")
     Long countAllUnreadByRecipientId(@Param("recipientId") Long recipientId)
 
@@ -29,7 +41,7 @@ interface NotificationRepository extends PagingAndSortingRepository<Notification
     Long countAllUnreadChatRoomNotificationsByRecipientId(@Param("recipientId") Long recipientId)
 
     @Query("select count(1) from Notification n where n.recipient.id = :recipientId and n.notificationType.name <> 'CHAT_ROOM' and n.viewed = false")
-    Long countAllUnreadByRecipientIdAndNotChatRoomNotificationType (@Param("recipientId") Long recipientId)
+    Long countAllUnreadByRecipientIdAndNotChatRoomNotificationType(@Param("recipientId") Long recipientId)
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete Notification n where n.connectionRequest.id = :connectionRequestId")
