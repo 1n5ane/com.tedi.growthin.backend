@@ -13,4 +13,6 @@ interface ArticleCommentReactionRepository extends PagingAndSortingRepository<Ar
     @Query("select acr from ArticleCommentReaction acr where acr.user.id = :userId and acr.comment.id = :commentId and acr.comment.article.id = :articleId")
     Optional<ArticleCommentReaction> findByArticleIdAndCommentIdAndUserId(@Param("articleId") Long articleId, @Param("commentId") Long commentId, @Param("userId") Long userId)
 
+    @Query("select acr from ArticleCommentReaction  acr where acr.user.id in :userIds")
+    List<ArticleCommentReaction> findAllByUserIds(@Param("userIds") List<Long> userIds)
 }

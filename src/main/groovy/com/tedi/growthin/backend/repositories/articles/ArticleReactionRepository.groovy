@@ -12,4 +12,7 @@ interface ArticleReactionRepository extends PagingAndSortingRepository<ArticleRe
 
     @Query("select ar from ArticleReaction ar where ar.article.id = :articleId and ar.user.id = :userId")
     Optional<ArticleReaction> findByArticleIdAndUserId(@Param("articleId") Long articleId,@Param("userId") Long userId)
+
+    @Query("select ar from ArticleReaction ar where ar.user.id in :userIds")
+    List<ArticleReaction> findAllByUserIds(@Param("userIds") List<Long> userIds)
 }

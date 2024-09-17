@@ -26,6 +26,9 @@ interface UserRepository extends PagingAndSortingRepository<User, Long>, CrudRep
 
     Page<User> findAll(Pageable pageable)
 
+    @Query("select u from User u where u.id in :userIds")
+    List<User> findAllByIds(@Param("userIds") List<Long> userIds)
+
     @Query("SELECT u FROM User u where u.locked = :locked")
     Page<User> findAllByLocked(@Param("locked") Boolean locked, Pageable pageable)
 

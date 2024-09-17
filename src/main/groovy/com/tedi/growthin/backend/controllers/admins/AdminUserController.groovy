@@ -5,12 +5,13 @@ import com.tedi.growthin.backend.dtos.admins.AdminRequestDto
 import com.tedi.growthin.backend.dtos.users.UserDto
 import com.tedi.growthin.backend.services.AdminIntegrationService
 import com.tedi.growthin.backend.services.jwt.JwtService
-import com.tedi.growthin.backend.utils.exception.ForbiddenException
 import com.tedi.growthin.backend.utils.exception.validation.ValidationException
+import com.tedi.growthin.backend.utils.http.CustomHttpOutputMessage
 import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageConverter
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.Authentication
 import org.springframework.security.oauth2.jwt.Jwt
@@ -32,6 +33,81 @@ class AdminUserController {
     @Autowired
     AdminIntegrationService adminIntegrationService
 
+    @Autowired
+    Map<String, HttpMessageConverter> converterMap
+
+    @GetMapping(value = "/export", produces = "application/json;charset=UTF-8", consumes = "application/json;charset=UTF-8")
+    @PreAuthorize("hasRole('ADMIN')")
+    @ResponseBody
+    def exportUsersData(@RequestBody request,
+                        @RequestParam(name = 'type', defaultValue = 'json') String exportType,
+                        Authentication authentication) {
+        def response = [
+                "success": true,
+                "data"   : null,
+                "error"  : ""
+        ]
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[adminId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        if (!request || !request.ids || request.ids.isEmpty()) {
+            response['success'] = false
+            response['error'] = 'No ids of type list provided'
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        List<Long> userIdList = []
+
+        try {
+            request.ids.each { id ->
+                userIdList.add((id as String).toLong())
+            }
+        } catch (NumberFormatException ignored) {
+            response['success'] = false
+            response['error'] = 'Invalid ids provided'
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        try {
+            def data = adminIntegrationService.exportUsersDataByUserIdList(userIdList, authentication)
+            response['data'] = data
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to export users data for user ids ${userIdList.toString()}: ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+
+        if (response['data']) {
+            if (exportType=='xml') {
+                ByteArrayOutputStream responseDataStream = new ByteArrayOutputStream()
+                userIdList.each { userId ->
+                    if(!response['data'][userId]['userDetails']['id']){
+                        //means requested user id not found -> remove user id key
+                        (response['data'] as Map<Long,?>).remove(userId)
+                    }
+                }
+                if(!(response['data'] as Map).isEmpty()) {
+                    converterMap['mappingJackson2XmlHttpMessageConverter'].write(response['data'], null, new CustomHttpOutputMessage(responseDataStream))
+                    //replace user ids as they are not valid xml fields
+                    //in json it's ok -> data:{9:{...user export data...}}
+                    //but in xml we will convert to -> data:{<user id="9"> ...user export data...</user>}
+                    def responseDataString = responseDataStream.toString()
+                    userIdList.each { userId ->
+                        responseDataString = responseDataString.replace("<${userId.toString()}>", "<user id='${userId.toString()}'>")
+                        responseDataString = responseDataString.replace("</${userId.toString()}>", "</user>")
+                    }
+                    response['data'] = responseDataString
+                }
+            }
+        }
+
+        if((response['data'] as Map).isEmpty())
+            response['data'] = null
+
+        //response will be json as in all controllers but in data field -> xml string is contained (if xml is requested)
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
 
     @GetMapping(value = "/{id}", produces = "application/json;charset=UTF-8")
     @PreAuthorize("hasRole('ADMIN')")
@@ -151,6 +227,75 @@ class AdminUserController {
         }
 
         return new ResponseEntity<>(response, HttpStatus.OK)
+    }
+
+    private def restrictUserAccountsByIdList(List idList, Authentication authentication, Boolean restrict = true) {
+        def response = ["success": true,
+                        "error"  : ""]
+
+        List<Long> userIdList = []
+
+        try {
+            idList.each { id ->
+                userIdList.add((id as String).toLong())
+            }
+        } catch (NumberFormatException ignored) {
+            response['success'] = false
+            response['error'] = 'Invalid ids provided'
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        def jwtToken = (Jwt) authentication.getCredentials()
+        String userIdentifier = "[adminId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
+
+        try {
+            adminIntegrationService.updateUserLockedByIdList(userIdList, authentication, restrict)
+            log.info("${userIdentifier} Successfully set restriction to '${restrict}' for users with ids ${userIdList.toString()}")
+        } catch (ValidationException validationException) {
+            log.error("${userIdentifier} Failed to set restriction to '${restrict}' for users with ids '${userIdList.toString()}': ${validationException.getMessage()}")
+            response["success"] = false
+            response["error"] = validationException.getMessage()
+        } catch (Exception exception) {
+            log.error("${userIdentifier} Failed to set restriction to '${restrict}' for users with ids '${userIdList.toString()}'': ${exception.getMessage()}")
+            response["success"] = false
+            response["error"] = "An error occured! Please try again later"
+        }
+        return new ResponseEntity<>(response, HttpStatus.OK)
+    }
+
+
+    @PostMapping(value = "/ban", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasRole('ADMIN')")
+    @ResponseBody
+    def banUserAccountsByUserIdList(@RequestBody request, Authentication authentication) {
+        def response = [
+                'success': true,
+                'error'  : ''
+        ]
+        if (!request || !request.ids || request.ids.isEmpty()) {
+            response['success'] = false
+            response['error'] = 'No ids of type list provided'
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        return restrictUserAccountsByIdList(request.ids as List, authentication, true)
+    }
+
+    @PostMapping(value = "/unban", produces = "application/json;charset=UTF-8")
+    @PreAuthorize("hasRole('ADMIN')")
+    @ResponseBody
+    def unbanUserAccountsByUserIdList(@RequestBody request, Authentication authentication) {
+        def response = [
+                'success': true,
+                'error'  : ''
+        ]
+        if (!request || !request.ids || request.ids.isEmpty()) {
+            response['success'] = false
+            response['error'] = 'No ids of type list provided'
+            return new ResponseEntity<>(response, HttpStatus.OK)
+        }
+
+        return restrictUserAccountsByIdList(request.ids as List, authentication, false)
     }
 
     @PostMapping(value = "/{id}/ban", produces = "application/json;charset=UTF-8")
@@ -299,7 +444,7 @@ class AdminUserController {
 
         try {
             def userAdminRequest = adminIntegrationService.updateUserAdminRequest(adminRequestDto, authentication)
-            if(!userAdminRequest){
+            if (!userAdminRequest) {
                 log.trace("${userIdentifier} User admin request with id '${adminRequestDto.id}' was not updated. No changes were made")
             }
             response['adminRequest'] = userAdminRequest

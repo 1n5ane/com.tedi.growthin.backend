@@ -25,4 +25,7 @@ interface ChatRoomRepository extends PagingAndSortingRepository<ChatRoom, Long>,
     @Query("select cr from ChatRoom cr where cr.user1.id = :userId or cr.user2.id = :userId")
     Page<ChatRoom> findAllByUserId(@Param("userId")Long userId, Pageable pageable)
 
+    @Query("select cr from ChatRoom cr where cr.user1.id in :userIds or cr.user2.id in :userIds")
+    List<ChatRoom> findAllByUserIds(@Param("userIds") List<Long> userIds)
+
 }

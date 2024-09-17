@@ -27,4 +27,10 @@ interface ArticleRepository extends PagingAndSortingRepository<Article, Long>, C
                                                                         @Param("connectedUserIds") List<Long> connectedUserIds,
                                                                         @Param("isDeleted") Boolean isDeleted,
                                                                         Pageable pageable)
+
+
+    //If this was production -> the following is wrong -> paging is needed in this situation
+    //for the sake of assignment (no time for paging) no paging is implemented
+    @Query("select a from Article a where a.user.id in :userIdList")
+    List<Article> findAllByUserIds(@Param("userIdList") List<Long> userIdList)
 }

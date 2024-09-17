@@ -50,4 +50,7 @@ interface UserConnectionRequestRepository extends PagingAndSortingRepository<Use
     @Query("SELECT ucr FROM UserConnectionRequest ucr where ucr.user.id = :userId and CAST(ucr.status AS string) = :status")
     Page<UserConnectionRequest> findAllFromUserByUserIdAndStatus(@Param("userId") Long userId, @Param("status") String status, Pageable pageable)
 
+
+    @Query("SELECT ucr FROM UserConnectionRequest ucr where ucr.user.id in :userIds")
+    List<UserConnectionRequest> findAllFromUserIds(@Param("userIds") List<Long> userIds)
 }

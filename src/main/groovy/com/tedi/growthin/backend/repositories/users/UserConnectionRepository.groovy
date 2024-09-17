@@ -37,4 +37,7 @@ interface UserConnectionRepository extends PagingAndSortingRepository<UserConnec
     //check if users are connected
     @Query("SELECT CASE WHEN COUNT(uc) > 0 THEN TRUE ELSE FALSE END FROM UserConnection uc where (uc.user.id = :userId1 and uc.connectedUser.id = :userId2) or (uc.user.id = :userId2 and uc.connectedUser.id = :userId1)")
     Boolean existsUserConnection(@Param("userId1") Long userId1, @Param("userId2") Long userId2)
+
+    @Query("SELECT uc FROM UserConnection uc where uc.user.id in :userIds or uc.connectedUser.id in :userIds")
+    List<UserConnection> findAllByUserIds(@Param("userIds") List<Long> userIds)
 }

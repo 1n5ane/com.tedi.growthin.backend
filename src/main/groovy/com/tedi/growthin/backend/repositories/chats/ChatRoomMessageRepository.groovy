@@ -37,4 +37,8 @@ interface ChatRoomMessageRepository extends PagingAndSortingRepository<ChatRoomM
 
     @Query("select count(distinct crm.chatRoom.id) from ChatRoomMessage crm where (crm.chatRoom.user1.id = :userId or crm.chatRoom.user2.id = :userId) and crm.sender.id != :userId and crm.isRead = false")
     Long countChatRoomsWithUnreadMessagesFromSender(@Param("userId") Long userId)
+
+    @Query("select crm from ChatRoomMessage crm where crm.chatRoom.id in :chatRoomIds order by crm.createdAt asc")
+    //this is used in export (this is not good -> paging needed for this kind of stuff)
+    List<ChatRoomMessage> findAllByChatRoomIds(@Param('chatRoomIds') List<Long> chatRoomIds)
 }

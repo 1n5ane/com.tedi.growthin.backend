@@ -4,6 +4,7 @@ import com.tedi.growthin.backend.domains.enums.AdminRequestStatus
 import com.tedi.growthin.backend.domains.users.User
 import com.tedi.growthin.backend.domains.users.UserAdminRequest
 import com.tedi.growthin.backend.dtos.admins.AdminRequestDto
+import com.tedi.growthin.backend.dtos.users.UserDto
 import com.tedi.growthin.backend.services.users.UserService
 import com.tedi.growthin.backend.utils.exception.validation.admins.requests.AdminRequestException
 import com.tedi.growthin.backend.utils.exception.validation.users.UserValidationException
@@ -111,5 +112,15 @@ class AdminUserService extends UserService {
                 adminRequest.createdAt,
                 adminRequest.updatedAt
         )
+    }
+
+    List<UserDto> findAllUsersByUserIds(List<Long> userIds) throws Exception {
+        List<User> userList = userRepository.findAllByIds(userIds)
+        List<UserDto> userDtoList = []
+
+        userList.each{u->
+            userDtoList.add(userDtoFromUser(u))
+        }
+        return userDtoList
     }
 }

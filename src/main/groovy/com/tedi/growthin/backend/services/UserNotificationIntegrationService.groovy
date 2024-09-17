@@ -36,7 +36,7 @@ class UserNotificationIntegrationService {
     NotificationService notificationService
 
     @Autowired
-    UserConnectionService connectionService
+    UserConnectionService userConnectionService
 
 
     //TODO: refactor the following Autowired. (Should not exist here)
@@ -190,7 +190,7 @@ class UserNotificationIntegrationService {
             notificationDto.recipientDto ? userIds.add(notificationDto.recipientDto.id) : null
         }
 
-        def connectedUserIds = connectionService.getConnectedUserIdsFromIdList(userId, userIds)
+        def connectedUserIds = userConnectionService.getConnectedUserIdsFromIdList(userId, userIds)
         notificationDtos.each { notificationDto ->
             if (!connectedUserIds.contains(notificationDto.userDto?.id)) {
                 notificationDto.userDto = UserDto.hidePrivateFields(notificationDto.userDto)

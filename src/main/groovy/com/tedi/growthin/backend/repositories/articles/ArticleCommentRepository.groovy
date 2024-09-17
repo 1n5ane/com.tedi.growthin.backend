@@ -25,4 +25,7 @@ interface ArticleCommentRepository extends PagingAndSortingRepository<ArticleCom
     @Query("select count(1) from ArticleComment ac where ac.article.id = :articleId and ac.isDeleted = false")
     Long countArticleComments(@Param("articleId") Long articleId)
 
+    @Query("select ac from ArticleComment ac where ac.user.id in :userIds")
+    List<ArticleComment> findAllByUserIds(@Param("userIds") List<Long> userIds)
+
 }

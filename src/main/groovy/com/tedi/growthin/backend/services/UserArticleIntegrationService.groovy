@@ -38,7 +38,7 @@ class UserArticleIntegrationService {
     Map<String, ValidationService> validationServiceMap
 
     @Autowired
-    UserArticleService articleService
+    UserArticleService userArticleService
 
     @Autowired
     UserService userService
@@ -74,7 +74,7 @@ class UserArticleIntegrationService {
         articleDto.articleComments = []
         articleDto.articleReactions = []
 
-        def createdArticleDto = articleService.createNewArticle(articleDto)
+        def createdArticleDto = userArticleService.createNewArticle(articleDto)
         return createdArticleDto
     }
 
@@ -87,7 +87,7 @@ class UserArticleIntegrationService {
 
 
         //find article and check if author is currentLoggedInUser
-        def toBeUpdatedArticleDto = articleService.findArticle((Long) articleDto.id)
+        def toBeUpdatedArticleDto = userArticleService.findArticle((Long) articleDto.id)
         if (toBeUpdatedArticleDto == null) {
             throw new ArticleException("Article with id '${articleDto.id}' was not found")
         }
@@ -113,7 +113,7 @@ class UserArticleIntegrationService {
         //when implement remove the following line
         articleDto.articleMedias = null
 
-        def updatedArticleDto = articleService.updateArticle(articleDto)
+        def updatedArticleDto = userArticleService.updateArticle(articleDto)
         //hide private fields of not connected users (with currentLoggedInUser)
         if (updatedArticleDto != null) {
             //if indeed updated
@@ -143,7 +143,7 @@ class UserArticleIntegrationService {
         validationServiceMap["articleCommentValidationService"].validate(articleCommentDto)
 
         //check if currentLoggedInUser is author of particular comment
-        def fetchedArticleComment = articleService.findArticleComment(
+        def fetchedArticleComment = userArticleService.findArticleComment(
                 (Long) articleCommentDto.articleId,
                 (Long) articleCommentDto.id
         )
@@ -162,7 +162,7 @@ class UserArticleIntegrationService {
             throw new ForbiddenException("This comment is deleted and can't be updated")
         }
 
-        def updatedArticleComment = articleService.updateArticleComment(articleCommentDto)
+        def updatedArticleComment = userArticleService.updateArticleComment(articleCommentDto)
         if (updatedArticleComment != null) {
             //hide user reaction private fields
             updatedArticleComment = hidePrivateUserFieldsOfNotConnectedUsers(currentLoggedInUserId, updatedArticleComment)
@@ -191,7 +191,7 @@ class UserArticleIntegrationService {
             throw new ArticleCommentException(articleException.getMessage() + " No comments can be made")
         }
 
-        def articleComment = articleService.createNewArticleComment(articleCommentDto)
+        def articleComment = userArticleService.createNewArticleComment(articleCommentDto)
         return articleComment
     }
 
@@ -213,7 +213,7 @@ class UserArticleIntegrationService {
             throw new ArticleReactionException(articleException.getMessage() + " No reactions can be made.")
         }
 
-        return articleService.createNewArticleReaction(articleReactionDto)
+        return userArticleService.createNewArticleReaction(articleReactionDto)
 
     }
 
@@ -229,7 +229,7 @@ class UserArticleIntegrationService {
         validationServiceMap["articleCommentReactionValidationService"].validate(articleCommentReactionDto)
 
         //check comment exists and not deleted
-        def articleCommentDto = articleService.findArticleComment(
+        def articleCommentDto = userArticleService.findArticleComment(
                 (Long) articleCommentReactionDto.articleId,
                 (Long) articleCommentReactionDto.commentId
         )
@@ -250,7 +250,7 @@ class UserArticleIntegrationService {
             throw new ArticleCommentReactionException(articleException.getMessage() + " No reactions to comments can be made.")
         }
 
-        return articleService.createNewArticleCommentReaction(articleCommentReactionDto)
+        return userArticleService.createNewArticleCommentReaction(articleCommentReactionDto)
     }
 
     Boolean deleteArticleReaction(Long articleId, Authentication authentication) throws Exception {
@@ -267,12 +267,12 @@ class UserArticleIntegrationService {
 
         //all good so far
         //check reaction exists
-        ArticleReactionDto articleReactionDto = articleService.findArticleReaction(articleId, currentLoggedInUserId)
+        ArticleReactionDto articleReactionDto = userArticleService.findArticleReaction(articleId, currentLoggedInUserId)
         if (articleReactionDto == null) {
             throw new ArticleReactionException("User with id '${currentLoggedInUserId}' has no reaction to article with id '${articleId}'")
         }
 
-        Boolean success = articleService.deleteArticleReaction((Long) articleReactionDto.id)
+        Boolean success = userArticleService.deleteArticleReaction((Long) articleReactionDto.id)
         return success
     }
 
@@ -281,7 +281,7 @@ class UserArticleIntegrationService {
         Long currentLoggedInUserId = JwtService.extractAppUserId(userJwtToken)
 
         //check comment exists and not deleted
-        def articleCommentDto = articleService.findArticleComment(articleId, commentId)
+        def articleCommentDto = userArticleService.findArticleComment(articleId, commentId)
         if (articleCommentDto == null) {
             throw new ArticleCommentReactionException("Comment with id '${commentId}' was not found in article with id '${articleId}'")
         }
@@ -300,12 +300,12 @@ class UserArticleIntegrationService {
 
         //all good so far
         //check reaction exists
-        ArticleCommentReactionDto articleCommentReactionDto = articleService.findArticleCommentReaction(articleId, commentId, currentLoggedInUserId)
+        ArticleCommentReactionDto articleCommentReactionDto = userArticleService.findArticleCommentReaction(articleId, commentId, currentLoggedInUserId)
         if (articleCommentReactionDto == null) {
             throw new ArticleCommentReactionException("User with id '${currentLoggedInUserId}' has no reaction to comment with id '${commentId}' in article with id '${articleId}'")
         }
 
-        Boolean success = articleService.deleteArticleCommentReaction((Long) articleCommentReactionDto.id)
+        Boolean success = userArticleService.deleteArticleCommentReaction((Long) articleCommentReactionDto.id)
         return success
 
     }
@@ -321,7 +321,7 @@ class UserArticleIntegrationService {
         }
 
         //fetch article
-        ArticleDto articleDto = articleService.findArticle(articleId)
+        ArticleDto articleDto = userArticleService.findArticle(articleId)
         if (articleDto == null) {
             throw new ArticleException("Article with id '${articleId}' was not found")
         }
@@ -333,7 +333,7 @@ class UserArticleIntegrationService {
 
         Boolean success = true
         if (articleDto.isDeleted != isDeleted)
-            success = articleService.setIsDeletedArticle(articleId, isDeleted)
+            success = userArticleService.setIsDeletedArticle(articleId, isDeleted)
 
         return success
     }
@@ -356,7 +356,7 @@ class UserArticleIntegrationService {
         }
 
         //fetch article comment
-        ArticleCommentDto articleCommentDto = articleService.findArticleComment(articleId, commentId)
+        ArticleCommentDto articleCommentDto = userArticleService.findArticleComment(articleId, commentId)
         if (articleCommentDto == null) {
             throw new ArticleCommentException("Comment with id '${commentId}' was not found for article with id '${articleId}'")
         }
@@ -367,7 +367,7 @@ class UserArticleIntegrationService {
         //all good so far -> set is deleted (if not already deleted)
         def success = true
         if (articleCommentDto.isDeleted != isDeleted)
-            success = articleService.setIsDeletedArticleComment(articleId, commentId, isDeleted)
+            success = userArticleService.setIsDeletedArticleComment(articleId, commentId, isDeleted)
 
         return success
     }
@@ -403,7 +403,7 @@ class UserArticleIntegrationService {
             return null
         }
 
-        return articleService.countArticleComments(articleId)
+        return userArticleService.countArticleComments(articleId)
     }
 
     ArticleListDto findAllArticles(Integer page,
@@ -429,7 +429,7 @@ class UserArticleIntegrationService {
         if (!["id", "createdAt", "updatedAt"].contains(sortBy))
             throw new PagingArgumentException("SortBy can only be one of [id, createdAt, updatedAt]")
 
-        Page<Article> articlePage = articleService.listAllArticlesOfConnectedNetworkAndIsDeleted(
+        Page<Article> articlePage = userArticleService.listAllArticlesOfConnectedNetworkAndIsDeleted(
                 currentLoggedInUserId,
                 page,
                 pageSize,
@@ -490,7 +490,7 @@ class UserArticleIntegrationService {
         if (currentLoggedInUserId == userId) {
             //if user lists all his own articles
             //fetch PUBLIC + CONNECTED_NETWORK + HIDDEN (and not deleted)
-            articlePage = articleService.listAllArticlesByUserIdAndIsDeleted(userId, page, pageSize, sortBy, order, false)
+            articlePage = userArticleService.listAllArticlesByUserIdAndIsDeleted(userId, page, pageSize, sortBy, order, false)
         } else {
             //check if users are connected (currentLoggedInUser with userId)
             def userConnection = new UserConnectionDto(null, currentLoggedInUserId, userId)
@@ -504,7 +504,7 @@ class UserArticleIntegrationService {
                 publicStatusList = [PublicStatus.PUBLIC]
             }
 
-            articlePage = articleService.listAllArticlesByUserIdAndIsDeletedAndPublicStatusIn(
+            articlePage = userArticleService.listAllArticlesByUserIdAndIsDeletedAndPublicStatusIn(
                     userId,
                     publicStatusList,
                     page,
@@ -543,7 +543,7 @@ class UserArticleIntegrationService {
             throw new ArticleCommentException(articleException.getMessage() + " Comment can't be viewed.")
         }
 
-        ArticleCommentDto articleCommentDto = articleService.findArticleComment(articleId, commentId)
+        ArticleCommentDto articleCommentDto = userArticleService.findArticleComment(articleId, commentId)
         if(articleCommentDto == null){
             throw new ArticleCommentException("Comment was not found")
         }
@@ -579,7 +579,7 @@ class UserArticleIntegrationService {
             throw new ArticleCommentException(articleException.getMessage() + " Comments can't be viewed.")
         }
 
-        Page<ArticleComment> articlecCommentPage = articleService.listAllArticleCommentsByArticleIdAndIsDeleted(articleId, page, pageSize, sortBy, order, false)
+        Page<ArticleComment> articlecCommentPage = userArticleService.listAllArticleCommentsByArticleIdAndIsDeleted(articleId, page, pageSize, sortBy, order, false)
 
         ArticleCommentListDto articleCommentListDto = new ArticleCommentListDto()
         articleCommentListDto.totalPages = articlecCommentPage.totalPages
@@ -600,7 +600,7 @@ class UserArticleIntegrationService {
     //return artilcleDto entity or throw ForbiddenException
     private ArticleDto checkIfAuthorizedToAccessArticle(Long currentLoggedInUserId, Long articleId) throws Exception {
         //check article exists
-        def articleDto = articleService.findArticle((Long) articleId)
+        def articleDto = userArticleService.findArticle((Long) articleId)
         if (articleDto == null) {
             throw new ArticleException("Article with id '${articleId}' was not found.")
         }
