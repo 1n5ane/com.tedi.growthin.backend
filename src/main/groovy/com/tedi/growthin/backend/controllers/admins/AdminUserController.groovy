@@ -36,7 +36,7 @@ class AdminUserController {
     @Autowired
     Map<String, HttpMessageConverter> converterMap
 
-    @GetMapping(value = "/export", produces = "application/json;charset=UTF-8", consumes = "application/json;charset=UTF-8")
+    @PostMapping(value = "/export", produces = "application/json;charset=UTF-8", consumes = "application/json;charset=UTF-8")
     @PreAuthorize("hasRole('ADMIN')")
     @ResponseBody
     def exportUsersData(@RequestBody request,
