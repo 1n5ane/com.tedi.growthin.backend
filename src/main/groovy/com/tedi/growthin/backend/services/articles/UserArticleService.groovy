@@ -520,7 +520,7 @@ class UserArticleService {
         //get connected network of userId
         def connectedUserIds = userConnectionRepository.findAllConnectedUserIdsByUserId(userId)
 
-        Page<Article> pageArticle = articleRepository.findAllByCurrentUserIdAndConnectedUserIdsAndIsDeleted(userId, connectedUserIds, isDeleted, pageable)
+        Page<Article> pageArticle = articleRepository.findAllByCurrentUserIdAndConnectedUserIdsOrPublicAndIsDeleted(userId, connectedUserIds, isDeleted, pageable)
         return pageArticle
     }
 

@@ -21,12 +21,12 @@ interface ArticleRepository extends PagingAndSortingRepository<Article, Long>, C
                                                                @Param("publicStatusList") List<String> publicStatusList,
                                                                Pageable pageable)
 
-    @Query("select a from Article a where ((a.user.id = :userId) or (a.publicStatus = 'PUBLIC') or (a.user.id in :connectedUserIds and a.publicStatus = 'CONNECTED_NETWORK')) and a.isDeleted = :isDeleted")
+    @Query("select a from Article a where (a.user.id = :userId or a.publicStatus = 'PUBLIC' or (a.user.id in :connectedUserIds and a.publicStatus = 'CONNECTED_NETWORK')) and a.isDeleted = :isDeleted order by case when a.user.id in :connectedUserIds then 1 else 2 end, case when a.publicStatus = 'PUBLIC' then 1 else 2 end")
     //return every public article + articles of connected network
-    Page<Article> findAllByCurrentUserIdAndConnectedUserIdsAndIsDeleted(@Param("userId") Long currentLoggedInUserId,
-                                                                        @Param("connectedUserIds") List<Long> connectedUserIds,
-                                                                        @Param("isDeleted") Boolean isDeleted,
-                                                                        Pageable pageable)
+    Page<Article> findAllByCurrentUserIdAndConnectedUserIdsOrPublicAndIsDeleted(@Param("userId") Long currentLoggedInUserId,
+                                                                                @Param("connectedUserIds") List<Long> connectedUserIds,
+                                                                                @Param("isDeleted") Boolean isDeleted,
+                                                                                Pageable pageable)
 
 
     //If this was production -> the following is wrong -> paging is needed in this situation
