@@ -23,8 +23,16 @@ class UserAuthServerService {
 
     def registerUser(UserDto userDto) throws Exception {
         def userUrl = endpointsConfiguration.getAuthServerBaseUserEndpoint()
-        def res = restTemplate.postForEntity(userUrl, userDto, HashMap.class)
-        return res.getBody()
+        HttpHeaders headers = new HttpHeaders()
+        headers.setContentType(MediaType.APPLICATION_JSON)
+        HttpEntity httpEntity = new HttpEntity(userDto, headers)
+        ResponseEntity<HashMap> response = restTemplate.exchange(
+                userUrl,
+                HttpMethod.POST,
+                httpEntity,
+                HashMap.class
+        )
+        return response.getBody()
     }
 
     def updateUser(UserDto userDto, String jwtToken) throws Exception {
