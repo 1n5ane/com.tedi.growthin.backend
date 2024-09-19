@@ -46,7 +46,7 @@ class UserProfileService {
 
         Media cvDocumentMedia = null
         if (userProfileDto.cvDocument) {
-            cvDocumentMedia = mediaService.createMedia(userProfileDto.profilePic)
+            cvDocumentMedia = mediaService.createMedia(userProfileDto.cvDocument)
         }
 //        User profileUser = userRepository.findById((Long) userProfileDto.id).get()
         User profileUser = new User()
@@ -97,7 +97,7 @@ class UserProfileService {
 
         if (userProfileDto.cvDocument) {
             if (userProfile.cvDocumentMedia && userProfile.cvDocumentMedia.data != userProfileDto.cvDocument.data) {
-                Media cvDocumentMedia = mediaService.createMedia(userProfileDto.profilePic)
+                Media cvDocumentMedia = mediaService.createMedia(userProfileDto.cvDocument)
                 userProfile.cvDocumentMedia = cvDocumentMedia
                 updated = true
             }
