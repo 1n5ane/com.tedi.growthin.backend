@@ -761,6 +761,7 @@ CREATE TABLE public.user_connection_requests
     connected_user_id bigint                               NOT NULL,
     status            public."UserConnectionRequestStatus" NOT NULL DEFAULT 'PENDING',
     created_at        timestamp with time zone             NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        timestamp with time zone,
     CONSTRAINT user_connection_requests_pk PRIMARY KEY (id)
 );
 -- ddl-end --
