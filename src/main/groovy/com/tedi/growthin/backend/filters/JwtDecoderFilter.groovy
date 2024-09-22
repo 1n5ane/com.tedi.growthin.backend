@@ -88,7 +88,8 @@ class JwtDecoderFilter extends OncePerRequestFilter {
             }else{
                 //user is registered in ouath server but not in application
                 log.trace("User with username '${claimsMap['sub'] as String}' is registered in auth server but not in app. Must register to continue.")
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED)
+                //TODO: REGISTER USER TO APPLICATION WITH DETAILS FROM AUTH SERVER
+                response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE)
                 return
             }
             Jwt oauth2Jwt = new Jwt(

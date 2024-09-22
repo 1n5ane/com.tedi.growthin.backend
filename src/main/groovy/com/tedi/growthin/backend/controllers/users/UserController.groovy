@@ -61,16 +61,16 @@ class UserController {
         def jwtToken = (Jwt) authentication.getCredentials()
         String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
 
-        try{
+        try {
             def userListDto = userIntegrationService.findAllUsers(page, pageSize, sortBy, order, authentication)
             response["hasNextPage"] = (page + 1) < userListDto.totalPages
             response["totalPages"] = userListDto.totalPages
             response["users"] = userListDto.users
-        }catch (ValidationException validationException) {
+        } catch (ValidationException validationException) {
             log.trace("${userIdentifier} ${validationException.getMessage()}")
             response["success"] = false
             response["error"] = validationException.getMessage()
-        }catch(Exception exception){
+        } catch (Exception exception) {
             log.error("${userIdentifier} Failed to list all users: ${exception.getMessage()}")
             response["success"] = false
             response["error"] = "An error occured! Please try again later"
@@ -84,6 +84,7 @@ class UserController {
     @ResponseBody
     def getUser(@RequestParam(required = false, name = "username") String username,
                 @RequestParam(required = false, name = "id") String id,
+                @RequestParam(required = false, name = "email") String email,
                 Authentication authentication) {
         def response = ["success": true,
                         "user"   : null,
@@ -93,18 +94,20 @@ class UserController {
         String userIdentifier = "[userId = '${JwtService.extractAppUserId(jwtToken)}', username = ${JwtService.extractUsername(jwtToken)}]"
 
         UserDto userDto = new UserDto()
-        if(username && !username.isEmpty()) {
+        if (username && !username.isEmpty()) {
             username = username.toLowerCase()
             userDto.username = username
-        }else if(id && !id.isEmpty()) {
+        } else if (id && !id.isEmpty()) {
             try {
                 userDto.id = id.toLong()
-            }catch(NumberFormatException _){
+            } catch (NumberFormatException _) {
                 response['success'] = false
                 response['error'] = 'Invalid id provided'
                 return new ResponseEntity<>(response, HttpStatus.OK)
             }
-        }else{
+        } else if (email && !email.isEmpty()) {
+            userDto.email = email
+        } else {
             response['success'] = false
             response['error'] = 'Invalid id or username provided'
             return new ResponseEntity<>(response, HttpStatus.OK)
