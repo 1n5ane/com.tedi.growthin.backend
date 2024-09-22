@@ -35,6 +35,8 @@ class UserService {
 
     @Transactional(rollbackFor = Exception.class)
     def registerUser(UserDto userDto, Boolean createAdminRequest = false) throws Exception {
+        userDto.username = userDto.username.toLowerCase()
+        userDto.email = userDto.email.toLowerCase()
         User user = new User(
                 userDto.username,
                 userDto.email,
@@ -72,6 +74,7 @@ class UserService {
 
     def checkUserExistsByUsername(String username) throws Exception {
         //first check on resource server
+        username = username.toLowerCase()
         def resourceServerUserExists = userRepository.existsByUsername(username)
         if (resourceServerUserExists)
             return resourceServerUserExists
@@ -85,6 +88,7 @@ class UserService {
 
     def checkUserExistsByEmail(String email) throws Exception {
         //first check on resource server
+        email = email.toLowerCase()
         def resourceServerUserExists = userRepository.existsByEmail(email)
         if (resourceServerUserExists)
             return resourceServerUserExists
@@ -105,7 +109,7 @@ class UserService {
     }
 
     def getUserByEmail(String email) {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email.toLowerCase())
         UserDto userDto = null
         if (user)
             userDto = userDtoFromUser(user)
@@ -113,7 +117,7 @@ class UserService {
     }
 
     def getUserByUsername(String username) {
-        User user = userRepository.findByUsername(username)
+        User user = userRepository.findByUsername(username.toLowerCase())
         UserDto userDto = null
         if (user)
             userDto = userDtoFromUser(user)
@@ -196,12 +200,12 @@ class UserService {
         def updated = false
 
         if ((userDto.username != null && !userDto.username.isEmpty()) && (preUpdatedUser.username != userDto.username)) {
-            preUpdatedUser.username = userDto.username
+            preUpdatedUser.username = userDto.username.toLowerCase()
             updated = true
         }
 
         if ((userDto.email != null && !userDto.email.isEmpty()) && (preUpdatedUser.email != userDto.email)) {
-            preUpdatedUser.email = userDto.email
+            preUpdatedUser.email = userDto.email.toLowerCase()
             updated = true
         }
 

@@ -145,12 +145,14 @@ class UserIntegrationService {
         userDto.authorities = ["ROLE_USER"]
 
         //first check if username or email not exists (both on resource and auth server)
+        userDto.username = userDto.username.toLowerCase()
         def usernameExists = checkUserExistsByUsername(userDto.username)
         if (usernameExists) {
             throw new UserUsernameExistsException("User with username '${userDto.username}' already exists")
         }
 
 
+        userDto.email = userDto.email.toLowerCase()
         def emailExists = checkUserExistsByEmail(userDto.email)
         if (emailExists) {
             throw new UserEmailExistsException("User with email '${userDto.email}' already exists")
@@ -203,6 +205,8 @@ class UserIntegrationService {
         //validate input
         validationServiceMap['userValidationService'].validate(user)
 
+        user.username = user.username?.toLowerCase()
+        user.email = user.email?.toLowerCase()
         //check if username/email updated and search for
         String currentLoggedInUsername = JwtService.extractUsername(userJwtToken)
         if (currentLoggedInUsername != user.username) {

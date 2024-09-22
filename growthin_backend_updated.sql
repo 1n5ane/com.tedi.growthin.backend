@@ -9,10 +9,10 @@
 -- 
 -- object: growthin | type: DATABASE --
 -- DROP DATABASE IF EXISTS growthin;
-CREATE DATABASE growthin;
+-- CREATE DATABASE growthin;
 -- ddl-end --
-
-
+CREATE DATABASE main;
+\connect main;
 -- object: public.users_id_seq | type: SEQUENCE --
 -- DROP SEQUENCE IF EXISTS public.users_id_seq CASCADE;
 CREATE SEQUENCE public.users_id_seq
@@ -820,24 +820,24 @@ ALTER TABLE public.user_job_field_keywords
 -- DROP TABLE IF EXISTS public.notifications CASCADE;
 CREATE TABLE public.notifications
 (
-    id                          bigint   NOT NULL,
-    user_id                     bigint   NOT NULL,
-    recipient_id                bigint   NOT NULL,
-    notification_type_id        integer  NOT NULL,
-    viewed                      boolean  NOT NULL        DEFAULT false,
-    is_article                  boolean  NOT NULL        DEFAULT false,
+    id                          bigint  NOT NULL,
+    user_id                     bigint  NOT NULL,
+    recipient_id                bigint  NOT NULL,
+    notification_type_id        integer NOT NULL,
+    viewed                      boolean NOT NULL         DEFAULT false,
+    is_article                  boolean NOT NULL         DEFAULT false,
     id_articles                 bigint,
-    is_comment                  boolean  NOT NULL        DEFAULT false,
+    is_comment                  boolean NOT NULL         DEFAULT false,
     id_comments                 bigint,
-    is_connection_request       boolean  NOT NULL        DEFAULT false,
+    is_connection_request       boolean NOT NULL         DEFAULT false,
     id_user_connection_requests bigint,
-    is_job_ad                   boolean  NOT NULL        DEFAULT false,
+    is_job_ad                   boolean NOT NULL         DEFAULT false,
     id_job_ads                  bigint,
     is_article_reaction         boolean                  DEFAULT false,
     id_user_articles_reactions  bigint,
-    is_comment_reaction         boolean  NOT NULL        DEFAULT false,
+    is_comment_reaction         boolean NOT NULL         DEFAULT false,
     id_user_comments_reactions  bigint,
-    is_chat                     boolean  NOT NULL        DEFAULT false,
+    is_chat                     boolean NOT NULL         DEFAULT false,
     id_chat_rooms               bigint,
     created_at                  timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT notification_pk PRIMARY KEY (id)
@@ -1223,7 +1223,8 @@ ALTER TABLE public.admin_requests
 -- ddl-end --
 
 insert into users
-values (DEFAULT, 'admin-hardcoded', 'admin-hardcoded@gmail.com', 'admin', 'admin', '69xxxxxxxx', 'GR', NULL, true);
+values (DEFAULT, 'admin-hardcoded', 'admin-hardcoded@gmail.com', false, 'admin', 'admin', '6982453601', false, 'GR',
+        false, '', false, true, false);
 insert into user_action_types (id, type)
 values (0, 'NEW'),
        (1, 'UPDATE');
@@ -1235,11 +1236,11 @@ CREATE CAST (varchar AS public."UserConnectionRequestStatus") WITH INOUT AS IMPL
 CREATE CAST (varchar AS public."AdminRequestStatus") WITH INOUT AS IMPLICIT;
 CREATE CAST (varchar AS public."PublicStatus") WITH INOUT AS IMPLICIT;
 insert into notification_types (id, name)
-values (0,'ARTICLE'),
+values (0, 'ARTICLE'),
        (1, 'ARTICLE_REACTION'),
-       (2,'ARTICLE_COMMENT'),
+       (2, 'ARTICLE_COMMENT'),
        (3, 'ARTICLE_COMMENT_REACTION'),
-       (4,'CHAT_ROOM'),
+       (4, 'CHAT_ROOM'),
        (5, 'CONNECTION_REQUEST');
 insert into reactions ("alias", image)
 values ('Like', decode(

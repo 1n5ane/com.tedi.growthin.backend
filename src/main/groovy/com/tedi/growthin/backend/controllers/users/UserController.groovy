@@ -94,6 +94,7 @@ class UserController {
 
         UserDto userDto = new UserDto()
         if(username && !username.isEmpty()) {
+            username = username.toLowerCase()
             userDto.username = username
         }else if(id && !id.isEmpty()) {
             try {
