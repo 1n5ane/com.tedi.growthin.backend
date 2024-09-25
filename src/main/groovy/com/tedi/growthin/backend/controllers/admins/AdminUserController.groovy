@@ -79,15 +79,15 @@ class AdminUserController {
         }
 
         if (response['data']) {
-            if (exportType=='xml') {
+            if (exportType == 'xml') {
                 ByteArrayOutputStream responseDataStream = new ByteArrayOutputStream()
                 userIdList.each { userId ->
-                    if(!response['data'][userId]['userDetails']['id']){
+                    if (response['data'][userId]['userDetails']['id'] == null) {
                         //means requested user id not found -> remove user id key
-                        (response['data'] as Map<Long,?>).remove(userId)
+                        (response['data'] as Map<Long, ?>).remove(userId)
                     }
                 }
-                if(!(response['data'] as Map).isEmpty()) {
+                if (!(response['data'] as Map).isEmpty()) {
                     converterMap['mappingJackson2XmlHttpMessageConverter'].write(response['data'], null, new CustomHttpOutputMessage(responseDataStream))
                     //replace user ids as they are not valid xml fields
                     //in json it's ok -> data:{9:{...user export data...}}
@@ -102,7 +102,7 @@ class AdminUserController {
             }
         }
 
-        if((response['data'] as Map).isEmpty())
+        if ((response['data'] as Map).isEmpty())
             response['data'] = null
 
         //response will be json as in all controllers but in data field -> xml string is contained (if xml is requested)
